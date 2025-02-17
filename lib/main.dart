@@ -158,54 +158,58 @@ class _NameListHomeState extends State<NameListHome> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Создать новый список'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: 'Название списка'),
-              ),
-              SizedBox(height: 16),
-              Text('Тип списка:'),
-              Row(
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Создать новый список'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Radio(
-                    value: ListType.health,
-                    groupValue: selectedType,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value as ListType;
-                      });
-                    },
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: 'Название списка'),
                   ),
-                  Text('О здравии'),
-                  Radio(
-                    value: ListType.repose,
-                    groupValue: selectedType,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value as ListType;
-                      });
-                    },
+                  SizedBox(height: 16),
+                  Text('Тип списка:'),
+                  Row(
+                    children: [
+                      Radio(
+                        value: ListType.health,
+                        groupValue: selectedType,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedType = value as ListType;
+                          });
+                        },
+                      ),
+                      Text('О здравии'),
+                      Radio(
+                        value: ListType.repose,
+                        groupValue: selectedType,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedType = value as ListType;
+                          });
+                        },
+                      ),
+                      Text('Об упокоении'),
+                    ],
                   ),
-                  Text('Об упокоении'),
                 ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (titleController.text.isNotEmpty) {
-                  _addNewList(titleController.text, selectedType);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text('Создать'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    if (titleController.text.isNotEmpty) {
+                      _addNewList(titleController.text, selectedType);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Text('Создать'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
