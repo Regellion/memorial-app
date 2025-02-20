@@ -30,9 +30,18 @@ class _NameListHomeState extends State<NameListHome> {
     NameList(title: 'Друзья', type: ListType.repose, names: ['Олег']),
   ];
 
+  final PageController _pageController = PageController(); // Контроллер для PageView
+  int _currentPageIndex = 0; // Текущий индекс списка
+
   void _addNewList(String title, ListType type) {
     setState(() {
       nameLists.add(NameList(title: title, type: type, names: []));
+      _currentPageIndex = nameLists.length - 1;
+
+      // Проверяем, есть ли элементы перед использованием контроллера
+      if (nameLists.isNotEmpty) {
+        _pageController.jumpToPage(_currentPageIndex);
+      }
     });
   }
 
@@ -54,6 +63,7 @@ class _NameListHomeState extends State<NameListHome> {
       // Автоматическое удаление списка, если он пуст
       if (nameLists[listIndex].names.isEmpty) {
         nameLists.removeAt(listIndex);
+        _currentPageIndex = nameLists.isEmpty ? 0 : _currentPageIndex.clamp(0, nameLists.length - 1);
       }
     });
   }
@@ -67,6 +77,7 @@ class _NameListHomeState extends State<NameListHome> {
   void _deleteList(int listIndex) {
     setState(() {
       nameLists.removeAt(listIndex);
+      _currentPageIndex = nameLists.isEmpty ? 0 : _currentPageIndex.clamp(0, nameLists.length - 1);
     });
   }
 
@@ -129,7 +140,13 @@ class _NameListHomeState extends State<NameListHome> {
         child: Text('Нет списков. Добавьте новый список.'),
       )
           : PageView.builder(
+        controller: _pageController, // Используем PageController
         itemCount: nameLists.length,
+        onPageChanged: (index) {
+          setState(() {
+            _currentPageIndex = index; // Обновляем текущий индекс
+          });
+        },
         itemBuilder: (context, index) {
           return NameListPage(
             nameList: nameLists[index],
@@ -142,12 +159,6 @@ class _NameListHomeState extends State<NameListHome> {
           );
         },
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //     _showAddListDialog(context);
-      //   },
-      //   child: Icon(Icons.add),
-      // ),
     );
   }
 
