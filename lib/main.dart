@@ -36,10 +36,9 @@ class _NameListHomeState extends State<NameListHome> {
   void _addNewList(String title, ListType type) {
     setState(() {
       nameLists.add(NameList(title: title, type: type, names: []));
-      _currentPageIndex = nameLists.length - 1;
-
-      // Проверяем, есть ли элементы перед использованием контроллера
-      if (nameLists.isNotEmpty) {
+      _currentPageIndex = nameLists.length - 1; // Переключиться на новый список
+      if (nameLists.length > 1) {
+        // Переключаемся на новую страницу только если PageView активен
         _pageController.jumpToPage(_currentPageIndex);
       }
     });
