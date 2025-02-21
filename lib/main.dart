@@ -303,22 +303,39 @@ class NameListPage extends StatelessWidget {
             },
           ),
         ),
-        //добавляем виджет Text
+        // Добавляем поле для ввода имени и кнопку под списком имен
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Text(
-                  'Добавить имя', // Это строка будет отображаться постоянно
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.add),
-                onPressed: () {
+              GestureDetector(
+                onTap: () {
                   _showAddNameDialog(context); // Показать диалог для добавления имени
                 },
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.blue),
+                    borderRadius: BorderRadius.circular(8.0),
+                    color: Colors.transparent,
+                  ),
+                  child: Text(
+                    "Добавить имя",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              SizedBox(height: 4.0),
+              Text(
+                "Имя пишется в Родительном падеже",
+                style: TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -435,6 +452,7 @@ class NameListPage extends StatelessWidget {
     );
   }
 }
+
 
 
 // Страница новостей
