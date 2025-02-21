@@ -177,7 +177,7 @@ class _NameListHomeState extends State<NameListHome> {
                 children: [
                   TextField(
                     controller: titleController,
-                    decoration: InputDecoration(labelText: 'Название списка'),
+                    decoration: InputDecoration(hintText: 'Без названия'),
                   ),
                   SizedBox(height: 16),
                   Text('Тип списка:'),
@@ -210,10 +210,8 @@ class _NameListHomeState extends State<NameListHome> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    if (titleController.text.isNotEmpty) {
-                      _addNewList(titleController.text, selectedType);
-                      Navigator.of(context).pop();
-                    }
+                    _addNewList(titleController.text, selectedType);
+                    Navigator.of(context).pop();
                   },
                   child: Text('Создать'),
                 ),
@@ -245,111 +243,131 @@ class NameListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    String frameImage =
+    nameList.type == ListType.health ? 'assets/images/health_frame.png' : 'assets/images/repose_frame.png';
+
+    return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  nameList.title,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.edit),
-                onPressed: () {
-                  _showEditTitleDialog(context, nameList.title);
-                },
-              ),
-              IconButton(
-                icon: Icon(Icons.delete),
-                onPressed: () {
-                  _showDeleteListDialog(context);
-                },
+        // Основной контейнер, где будет содержимое списка
+        Container(
+          padding: EdgeInsets.only(top: 40.0, bottom: 70.0, left: 16, right: 16), // Отступы
+          decoration: BoxDecoration(
+            color: Colors.white, // Фон для содержимого списка
+            borderRadius: BorderRadius.circular(8.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: Offset(0, 2), // Тень незначительная
               ),
             ],
           ),
-        ),
-        Text(
-          nameList.type == ListType.health ? 'О здравии' : 'Об упокоении',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: nameList.names.length,
-            itemBuilder: (context, index) {
-              return Dismissible(
-                key: Key(nameList.names[index]),
-                direction: DismissDirection.horizontal,
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.only(left: 16.0),
-                  child: Icon(Icons.delete, color: Colors.white),
-                ),
-                secondaryBackground: Container(
-                  color: Colors.blue,
-                  alignment: Alignment.centerRight,
-                  padding: EdgeInsets.only(right: 16.0),
-                  child: Icon(Icons.edit, color: Colors.white),
-                ),
-                confirmDismiss: (direction) async {
-                  if (direction == DismissDirection.startToEnd) {
-                    // При свайпе вправо задаем вопрос - хотите ли вы удалить имя?
-                    bool? confirm = await _showDeleteConfirmDialog(context);
-                    if (confirm == true) {
-                      onDeleteName(index); // Удаляем имя из списка
-                      return true; // Подтверждение удаления
-                    }
-                  } else if (direction == DismissDirection.endToStart) {
-                    // При свайпе влево, открываем диалог редактирования
-                    _showEditDialog(context, index, nameList.names[index]);
-                    return false; // Не удаляем элемент, просто открываем диалог
-                  }
-                  return false; // Если ничего не происходит
-                },
-                child: ListTile(
-                  title: Text(nameList.names[index]),
-                ),
-              );
-            },
-          ),
-        ),
-        // Добавляем поле для ввода имени и кнопку под списком имен
-        Padding(
-          padding: const EdgeInsets.all(8.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              GestureDetector(
-                onTap: () {
-                  _showAddNameDialog(context); // Показать диалог для добавления имени
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.blue),
-                    borderRadius: BorderRadius.circular(8.0),
-                    color: Colors.transparent,
-                  ),
-                  child: Text(
-                    "Добавить имя",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue,
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nameList.title,
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                    IconButton(
+                      icon: Icon(Icons.edit),
+                      onPressed: () {
+                        _showEditTitleDialog(context, nameList.title);
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        _showDeleteListDialog(context);
+                      },
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 4.0),
               Text(
-                "Имя пишется в Родительном падеже",
-                style: TextStyle(color: Colors.grey),
-                textAlign: TextAlign.center,
+                nameList.type == ListType.health ? 'О здравии' : 'Об упокоении',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: nameList.names.length,
+                  itemBuilder: (context, index) {
+                    return Dismissible(
+                      key: Key(nameList.names[index]),
+                      direction: DismissDirection.horizontal,
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerLeft,
+                        padding: EdgeInsets.only(left: 16.0),
+                        child: Icon(Icons.delete, color: Colors.white),
+                      ),
+                      secondaryBackground: Container(
+                        color: Colors.blue,
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.only(right: 16.0),
+                        child: Icon(Icons.edit, color: Colors.white),
+                      ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          bool? confirm = await _showDeleteConfirmDialog(context);
+                          if (confirm == true) {
+                            onDeleteName(index); // Удаляем имя из списка
+                            return true; // Подтверждение удаления
+                          }
+                        } else if (direction == DismissDirection.endToStart) {
+                          _showEditDialog(context, index, nameList.names[index]);
+                          return false; // Не удаляем элемент, просто открываем диалог
+                        }
+                        return false; // Если ничего не происходит
+                      },
+                      child: ListTile(
+                        title: Text(nameList.names[index]),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        _showAddNameDialog(context); // Показать диалог для добавления имени
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.blue),
+                          borderRadius: BorderRadius.circular(8.0),
+                          color: Colors.transparent,
+                        ),
+                        child: Text(
+                          "Добавить имя",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 4.0),
+                    Text(
+                      "Имя пишется в Родительном падеже",
+                      style: TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -444,7 +462,7 @@ class NameListPage extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Редактировать название списка'),
+          title: Text('Редактировать название списка',),
           content: TextField(
             controller: titleController,
             decoration: InputDecoration(hintText: 'Введите новое название'),
@@ -452,10 +470,8 @@ class NameListPage extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () {
-                if (titleController.text.isNotEmpty) {
-                  onEditTitle(titleController.text);
-                  Navigator.of(context).pop();
-                }
+                onEditTitle(titleController.text);
+                Navigator.of(context).pop();
               },
               child: Text('Сохранить'),
             ),
