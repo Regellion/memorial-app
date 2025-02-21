@@ -280,24 +280,38 @@ class NameListPage extends StatelessWidget {
           child: ListView.builder(
             itemCount: nameList.names.length,
             itemBuilder: (context, index) {
-              return ListTile(
-                title: Text(nameList.names[index]),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        _showEditDialog(context, index, nameList.names[index]);
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () {
-                        onDeleteName(index);
-                      },
-                    ),
-                  ],
+              return Dismissible(
+                key: Key(nameList.names[index]),
+                direction: DismissDirection.horizontal,
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerLeft,
+                  padding: EdgeInsets.only(left: 16.0),
+                  child: Icon(Icons.delete, color: Colors.white),
+                ),
+                secondaryBackground: Container(
+                  color: Colors.blue,
+                  alignment: Alignment.centerRight,
+                  padding: EdgeInsets.only(right: 16.0),
+                  child: Icon(Icons.edit, color: Colors.white),
+                ),
+                confirmDismiss: (direction) async {
+                  if (direction == DismissDirection.startToEnd) {
+                    // При свайпе вправо задаем вопрос - хотите ли вы удалить имя?
+                    bool? confirm = await _showDeleteConfirmDialog(context);
+                    if (confirm == true) {
+                      onDeleteName(index); // Удаляем имя из списка
+                      return true; // Подтверждение удаления
+                    }
+                  } else if (direction == DismissDirection.endToStart) {
+                    // При свайпе влево, открываем диалог редактирования
+                    _showEditDialog(context, index, nameList.names[index]);
+                    return false; // Не удаляем элемент, просто открываем диалог
+                  }
+                  return false; // Если ничего не происходит
+                },
+                child: ListTile(
+                  title: Text(nameList.names[index]),
                 ),
               );
             },
@@ -342,6 +356,32 @@ class NameListPage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<bool> _showDeleteConfirmDialog(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Удалить имя'),
+          content: Text('Вы уверены, что хотите удалить это имя?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: Text('Удалить'),
+            ),
+          ],
+        );
+      },
+    ) ?? Future.value(false);
   }
 
   void _showAddNameDialog(BuildContext context) {
