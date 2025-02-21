@@ -303,18 +303,24 @@ class NameListPage extends StatelessWidget {
             },
           ),
         ),
+        //добавляем виджет Text
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            decoration: InputDecoration(
-              labelText: 'Добавить имя',
-              suffixIcon: IconButton(
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Добавить имя', // Это строка будет отображаться постоянно
+                  style: TextStyle(fontSize: 16, color: Colors.black54),
+                ),
+              ),
+              IconButton(
                 icon: Icon(Icons.add),
                 onPressed: () {
-                  _showAddNameDialog(context);
+                  _showAddNameDialog(context); // Показать диалог для добавления имени
                 },
               ),
-            ),
+            ],
           ),
         ),
       ],
@@ -429,6 +435,7 @@ class NameListPage extends StatelessWidget {
     );
   }
 }
+
 
 // Страница новостей
 class NewsPage extends StatelessWidget {
