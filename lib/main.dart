@@ -443,22 +443,58 @@ class NameListPage extends StatelessWidget {
   }
 
   void _showAddNameDialog(BuildContext context) {
+    final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final nameController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text('Добавить имя'),
-          content: TextField(
-            controller: nameController,
-            decoration: InputDecoration(hintText: 'Введите имя'),
+          content: SingleChildScrollView( // Обработка прокрутки
+            child: Container(
+              width: double.maxFinite, // Задаем максимальную ширину диалога
+              child: Form(
+                key: _formKey, // Подключаем ключ формы
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Позволяем колонке занимать минимальную высоту
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: 'Введите имя',
+                        errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
+                        errorMaxLines: 5, // Разрешаем перенос текста ошибки на 3 строки
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Имя не может быть пустым';
+                        }
+
+                        // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
+                        final regex = RegExp(r'^[А-Яа-яЁё]+$'); //todo какие то проблемы с Ёё
+
+                        if (!regex.hasMatch(value.trim())) {
+                          return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
+                        }
+
+                        return null; // Валидация пройдена
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  onAddName(nameController.text);
-                  Navigator.of(context).pop();
+                // Проверяем валидацию
+                if (_formKey.currentState!.validate()) {
+                  if (nameController.text.isNotEmpty) {
+                    onAddName(nameController.text);
+                    Navigator.of(context).pop();
+                  }
                 }
               },
               child: Text('Добавить'),
