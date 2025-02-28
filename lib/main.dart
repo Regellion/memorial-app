@@ -299,9 +299,14 @@ class NameListPage extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        nameList.title,
-                        style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                      child: GestureDetector(
+                        onLongPress: () {
+                          _showEditTitleDialog(context, nameList.title); // Редактирование при долгом нажатии
+                        },
+                        child: Text(
+                          nameList.title,
+                          style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                     IconButton(
@@ -360,6 +365,9 @@ class NameListPage extends StatelessWidget {
                           nameList.names[index],
                           style: TextStyle(fontSize: Provider.of<Settings>(context).fontSize),
                         ),
+                        onLongPress: () {
+                          _showEditDialog(context, index, nameList.names[index]); // Редактирование при долгом нажатии
+                        },
                       ),
                     );
                   },
