@@ -550,6 +550,18 @@ class NewsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Новости'),
+          actions: [
+            IconButton(
+              onPressed: () {
+                // Переход в страницу настроек
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
+              },
+            icon: Icon(Icons.settings), // Значок настроек
+            ),
+          ],
       ),
       body: Center(
         child: Text('Здесь будут новости приложения'),
