@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'settings.dart';
 
 void main() {
-  runApp(NameListApp());
+  runApp(
+      ChangeNotifierProvider(
+        create: (context) => Settings(),
+        child: NameListApp(),
+      ),
+  );
 }
 
 class NameListApp extends StatelessWidget {
@@ -131,6 +138,17 @@ class _NameListHomeState extends State<NameListHome> {
                 );
               },
             ),
+            ListTile(
+              leading: Icon(Icons.settings), // Иконка настроек
+              title: Text('Настройки'),
+              onTap: () {
+                Navigator.pop(context); // Закрыть Drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -243,8 +261,9 @@ class NameListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String frameImage =
-    nameList.type == ListType.health ? 'assets/images/health_frame.png' : 'assets/images/repose_frame.png';
+    String frameImage = nameList.type == ListType.health
+        ? 'assets/images/health_frame.png'
+        : 'assets/images/repose_frame.png';
 
     return Stack(
       children: [
@@ -327,7 +346,10 @@ class NameListPage extends StatelessWidget {
                         return false; // Если ничего не происходит
                       },
                       child: ListTile(
-                        title: Text(nameList.names[index]),
+                        title: Text(
+                          nameList.names[index],
+                          style: TextStyle(fontSize: Provider.of<Settings>(context).fontSize),
+                        ),
                       ),
                     );
                   },
@@ -538,4 +560,46 @@ class NameList {
     required this.type,
     required this.names,
   });
+}
+
+class SettingsPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final settings = Provider.of<Settings>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Настройки'),
+      ),
+      body: Column(
+        children: [
+          ListTile(
+            title: Text('Размер текста имен'),
+            trailing: DropdownButton<double>(
+              value: settings.fontSize,
+              items: [
+                DropdownMenuItem<double>(
+                  value: 14.0,
+                  child: Text('Маленький'),
+                ),
+                DropdownMenuItem<double>(
+                  value: 16.0,
+                  child: Text('Средний'),
+                ),
+                DropdownMenuItem<double>(
+                  value: 18.0,
+                  child: Text('Большой'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  settings.setFontSize(value);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
