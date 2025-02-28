@@ -301,7 +301,7 @@ class NameListPage extends StatelessWidget {
                     Expanded(
                       child: Text(
                         nameList.title,
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
                       ),
                     ),
                     IconButton(
