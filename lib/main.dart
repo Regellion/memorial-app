@@ -93,6 +93,16 @@ class _NameListHomeState extends State<NameListHome> {
       appBar: AppBar(
         title: Text('Помянник'),
         actions: [
+          IconButton(
+              onPressed: () {
+                // Переход в страницу настроек
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
+              },
+              icon: Icon(Icons.settings), // Значок настроек
+          ),
           FloatingActionButton(
             onPressed: () {
               _showAddListDialog(context);
@@ -575,27 +585,19 @@ class SettingsPage extends StatelessWidget {
         children: [
           ListTile(
             title: Text('Размер текста имен'),
-            trailing: DropdownButton<double>(
-              value: settings.fontSize,
-              items: [
-                DropdownMenuItem<double>(
-                  value: 14.0,
-                  child: Text('Маленький'),
-                ),
-                DropdownMenuItem<double>(
-                  value: 16.0,
-                  child: Text('Средний'),
-                ),
-                DropdownMenuItem<double>(
-                  value: 18.0,
-                  child: Text('Большой'),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
+            subtitle: Text('Выбранный размер: ${settings.fontSize.toInt()}'),
+            trailing: SizedBox(
+              width: 200,
+              child: Slider(
+                value: settings.fontSize,
+                min: 10,
+                max: 40,
+                divisions: 30, // Количество шагов (40 - 10 = 30)
+                label: settings.fontSize.toInt().toString(),
+                onChanged: (value) {
                   settings.setFontSize(value);
-                }
-              },
+                },
+              ),
             ),
           ),
         ],
