@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'settings.dart';
 
 void main() {
   runApp(
-      ChangeNotifierProvider(
-        create: (context) => Settings(),
-        child: NameListApp(),
-      ),
+    ChangeNotifierProvider(
+      create: (context) => Settings(),
+      child: NameListApp(),
+    ),
   );
 }
 
@@ -37,7 +38,8 @@ class _NameListHomeState extends State<NameListHome> {
     NameList(title: 'Друзья', type: ListType.repose, names: ['Олег']),
   ];
 
-  final PageController _pageController = PageController(); // Контроллер для PageView
+  final PageController _pageController =
+      PageController(); // Контроллер для PageView
   int _currentPageIndex = 0; // Текущий индекс списка
 
   void _addNewList(String title, ListType type) {
@@ -69,7 +71,10 @@ class _NameListHomeState extends State<NameListHome> {
       // Автоматическое удаление списка, если он пуст
       if (nameLists[listIndex].names.isEmpty) {
         nameLists.removeAt(listIndex);
-        _currentPageIndex = nameLists.isEmpty ? 0 : _currentPageIndex.clamp(0, nameLists.length - 1);
+        _currentPageIndex =
+            nameLists.isEmpty
+                ? 0
+                : _currentPageIndex.clamp(0, nameLists.length - 1);
       }
     });
   }
@@ -83,7 +88,10 @@ class _NameListHomeState extends State<NameListHome> {
   void _deleteList(int listIndex) {
     setState(() {
       nameLists.removeAt(listIndex);
-      _currentPageIndex = nameLists.isEmpty ? 0 : _currentPageIndex.clamp(0, nameLists.length - 1);
+      _currentPageIndex =
+          nameLists.isEmpty
+              ? 0
+              : _currentPageIndex.clamp(0, nameLists.length - 1);
     });
   }
 
@@ -94,14 +102,14 @@ class _NameListHomeState extends State<NameListHome> {
         title: Text('Помянник'),
         actions: [
           IconButton(
-              onPressed: () {
-                // Переход в страницу настроек
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsPage()),
-                );
-              },
-              icon: Icon(Icons.settings), // Значок настроек
+            onPressed: () {
+              // Переход в страницу настроек
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsPage()),
+              );
+            },
+            icon: Icon(Icons.settings), // Значок настроек
           ),
           FloatingActionButton(
             onPressed: () {
@@ -118,15 +126,10 @@ class _NameListHomeState extends State<NameListHome> {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
+              decoration: BoxDecoration(color: Colors.blue),
               child: Text(
                 'Меню',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
             ListTile(
@@ -162,30 +165,31 @@ class _NameListHomeState extends State<NameListHome> {
           ],
         ),
       ),
-      body: nameLists.isEmpty
-          ? Center(
-        child: Text('Нет списков. Добавьте новый список.'),
-      )
-          : PageView.builder(
-        controller: _pageController, // Используем PageController
-        itemCount: nameLists.length,
-        onPageChanged: (index) {
-          setState(() {
-            _currentPageIndex = index; // Обновляем текущий индекс
-          });
-        },
-        itemBuilder: (context, index) {
-          return NameListPage(
-            nameList: nameLists[index],
-            onAddName: (name) => _addNameToList(index, name),
-            onEditName: (nameIndex, newName) =>
-                _editNameInList(index, nameIndex, newName),
-            onDeleteName: (nameIndex) => _deleteNameFromList(index, nameIndex),
-            onEditTitle: (newTitle) => _editListTitle(index, newTitle),
-            onDeleteList: () => _deleteList(index),
-          );
-        },
-      ),
+      body:
+          nameLists.isEmpty
+              ? Center(child: Text('Нет списков. Добавьте новый список.'))
+              : PageView.builder(
+                controller: _pageController, // Используем PageController
+                itemCount: nameLists.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPageIndex = index; // Обновляем текущий индекс
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return NameListPage(
+                    nameList: nameLists[index],
+                    onAddName: (name) => _addNameToList(index, name),
+                    onEditName:
+                        (nameIndex, newName) =>
+                            _editNameInList(index, nameIndex, newName),
+                    onDeleteName:
+                        (nameIndex) => _deleteNameFromList(index, nameIndex),
+                    onEditTitle: (newTitle) => _editListTitle(index, newTitle),
+                    onDeleteList: () => _deleteList(index),
+                  );
+                },
+              ),
     );
   }
 
@@ -271,15 +275,21 @@ class NameListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String frameImage = nameList.type == ListType.health
-        ? 'assets/images/health_frame.png'
-        : 'assets/images/repose_frame.png';
+    String frameImage =
+        nameList.type == ListType.health
+            ? 'assets/images/health_frame.png'
+            : 'assets/images/repose_frame.png';
 
     return Stack(
       children: [
         // Основной контейнер, где будет содержимое списка
         Container(
-          padding: EdgeInsets.only(top: 40.0, bottom: 70.0, left: 16, right: 16), // Отступы
+          padding: EdgeInsets.only(
+            top: 40.0,
+            bottom: 70.0,
+            left: 16,
+            right: 16,
+          ), // Отступы
           decoration: BoxDecoration(
             color: Colors.white, // Фон для содержимого списка
             borderRadius: BorderRadius.circular(8.0),
@@ -301,11 +311,17 @@ class NameListPage extends StatelessWidget {
                     Expanded(
                       child: GestureDetector(
                         onLongPress: () {
-                          _showEditTitleDialog(context, nameList.title); // Редактирование при долгом нажатии
+                          _showEditTitleDialog(
+                            context,
+                            nameList.title,
+                          ); // Редактирование при долгом нажатии
                         },
                         child: Text(
                           nameList.title,
-                          style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -349,13 +365,19 @@ class NameListPage extends StatelessWidget {
                       ),
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.startToEnd) {
-                          bool? confirm = await _showDeleteConfirmDialog(context);
+                          bool? confirm = await _showDeleteConfirmDialog(
+                            context,
+                          );
                           if (confirm == true) {
                             onDeleteName(index); // Удаляем имя из списка
                             return true; // Подтверждение удаления
                           }
                         } else if (direction == DismissDirection.endToStart) {
-                          _showEditDialog(context, index, nameList.names[index]);
+                          _showEditDialog(
+                            context,
+                            index,
+                            nameList.names[index],
+                          );
                           return false; // Не удаляем элемент, просто открываем диалог
                         }
                         return false; // Если ничего не происходит
@@ -363,10 +385,16 @@ class NameListPage extends StatelessWidget {
                       child: ListTile(
                         title: Text(
                           nameList.names[index],
-                          style: TextStyle(fontSize: Provider.of<Settings>(context).fontSize),
+                          style: TextStyle(
+                            fontSize: Provider.of<Settings>(context).fontSize,
+                          ),
                         ),
                         onLongPress: () {
-                          _showEditDialog(context, index, nameList.names[index]); // Редактирование при долгом нажатии
+                          _showEditDialog(
+                            context,
+                            index,
+                            nameList.names[index],
+                          ); // Редактирование при долгом нажатии
                         },
                       ),
                     );
@@ -380,7 +408,9 @@ class NameListPage extends StatelessWidget {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        _showAddNameDialog(context); // Показать диалог для добавления имени
+                        _showAddNameDialog(
+                          context,
+                        ); // Показать диалог для добавления имени
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -418,32 +448,34 @@ class NameListPage extends StatelessWidget {
 
   Future<bool> _showDeleteConfirmDialog(BuildContext context) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Удалить имя'),
-          content: Text('Вы уверены, что хотите удалить это имя?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-              child: Text('Отмена'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-              child: Text('Удалить'),
-            ),
-          ],
-        );
-      },
-    ) ?? Future.value(false);
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Удалить имя'),
+              content: Text('Вы уверены, что хотите удалить это имя?'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text('Отмена'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: Text('Удалить'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        Future.value(false);
   }
 
   void _showAddNameDialog(BuildContext context) {
-    final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
+    final _formKey =
+        GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final nameController = TextEditingController();
 
     showDialog(
@@ -451,20 +483,24 @@ class NameListPage extends StatelessWidget {
       builder: (context) {
         return AlertDialog(
           title: Text('Добавить имя'),
-          content: SingleChildScrollView( // Обработка прокрутки
+          content: SingleChildScrollView(
+            // Обработка прокрутки
             child: Container(
               width: double.maxFinite, // Задаем максимальную ширину диалога
               child: Form(
                 key: _formKey, // Подключаем ключ формы
                 child: Column(
-                  mainAxisSize: MainAxisSize.min, // Позволяем колонке занимать минимальную высоту
+                  mainAxisSize: MainAxisSize.min,
+                  // Позволяем колонке занимать минимальную высоту
                   children: [
                     TextFormField(
                       controller: nameController,
                       decoration: InputDecoration(
                         hintText: 'Введите имя',
-                        errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
-                        errorMaxLines: 5, // Разрешаем перенос текста ошибки на 3 строки
+                        errorStyle: TextStyle(color: Colors.red),
+                        // Стиль текста ошибки
+                        errorMaxLines:
+                            5, // Разрешаем перенос текста ошибки на 3 строки
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -472,7 +508,9 @@ class NameListPage extends StatelessWidget {
                         }
 
                         // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
-                        final regex = RegExp(r'^[А-Яа-яЁё]+$'); //todo какие то проблемы с Ёё
+                        final regex = RegExp(
+                          r'^[А-Яа-яЁё]+$',
+                        ); //todo какие то проблемы с Ёё
 
                         if (!regex.hasMatch(value.trim())) {
                           return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
@@ -538,7 +576,7 @@ class NameListPage extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Редактировать название списка',),
+          title: Text('Редактировать название списка'),
           content: TextField(
             controller: titleController,
             decoration: InputDecoration(hintText: 'Введите новое название'),
@@ -585,8 +623,6 @@ class NameListPage extends StatelessWidget {
   }
 }
 
-
-
 // Страница новостей
 class NewsPage extends StatelessWidget {
   @override
@@ -594,22 +630,20 @@ class NewsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Новости'),
-          actions: [
-            IconButton(
-              onPressed: () {
-                // Переход в страницу настроек
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsPage()),
-                );
-              },
+        actions: [
+          IconButton(
+            onPressed: () {
+              // Переход в страницу настроек
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsPage()),
+              );
+            },
             icon: Icon(Icons.settings), // Значок настроек
-            ),
-          ],
+          ),
+        ],
       ),
-      body: Center(
-        child: Text('Здесь будут новости приложения'),
-      ),
+      body: Center(child: Text('Здесь будут новости приложения')),
     );
   }
 }
@@ -621,11 +655,7 @@ class NameList {
   ListType type;
   List<String> names;
 
-  NameList({
-    required this.title,
-    required this.type,
-    required this.names,
-  });
+  NameList({required this.title, required this.type, required this.names});
 }
 
 class SettingsPage extends StatelessWidget {
@@ -634,9 +664,7 @@ class SettingsPage extends StatelessWidget {
     final settings = Provider.of<Settings>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Настройки'),
-      ),
+      appBar: AppBar(title: Text('Настройки')),
       body: Column(
         children: [
           ListTile(
@@ -648,7 +676,8 @@ class SettingsPage extends StatelessWidget {
                 value: settings.fontSize,
                 min: 10,
                 max: 40,
-                divisions: 30, // Количество шагов (40 - 10 = 30)
+                divisions: 30,
+                // Количество шагов (40 - 10 = 30)
                 label: settings.fontSize.toInt().toString(),
                 onChanged: (value) {
                   settings.setFontSize(value);
