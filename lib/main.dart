@@ -275,6 +275,20 @@ class NameListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String frameImage =
+    nameList.type == ListType.health ?
+    'assets/images/health_frame_title.png':
+    'assets/images/repose_frame_title.png';
+
+    // Получаем размеры экрана
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
+    // Устанавливаем размеры контейнера в зависимости от размера экрана
+    // Например, ширина 30% от ширины экрана, а высота 20% от высоты экрана
+    double containerWidth = screenWidth * 0.5; // 50% от ширины экрана
+    double containerHeight = screenHeight * 0.1; // 10% от высоты экрана
+
     // Определение цвета линии в зависимости от типа списка
     Color lineColor = nameList.type == ListType.health ? Colors.red : Colors.blue;
 
@@ -309,10 +323,7 @@ class NameListPage extends StatelessWidget {
                     Expanded(
                       child: GestureDetector(
                         onLongPress: () {
-                          _showEditTitleDialog(
-                            context,
-                            nameList.title,
-                          ); // Редактирование при долгом нажатии
+                          _showEditTitleDialog(context, nameList.title); // Редактирование при долгом нажатии
                         },
                         child: Text(
                           nameList.title,
@@ -320,6 +331,7 @@ class NameListPage extends StatelessWidget {
                             fontSize: 40,
                             fontWeight: FontWeight.bold,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
@@ -338,9 +350,12 @@ class NameListPage extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                nameList.type == ListType.health ? 'О здравии' : 'Об упокоении',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+              // Заменяем текст картинкой
+              Container(
+                height: containerHeight,
+                width: containerWidth,
+                // margin: EdgeInsets.symmetric(vertical: 8.0),
+                child: Image.asset(frameImage), // Отображаем картинку вместо текста
               ),
               Expanded(
                 child: ListView.builder(
@@ -374,27 +389,35 @@ class NameListPage extends StatelessWidget {
                         }
                         return false; // Если ничего не происходит
                       },
-                      child: Column(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center, // Центрируем все содержимое в строке
                         children: [
-                          ListTile(
-                            title: Text(
-                              nameList.names[index],
-                              style: TextStyle(
-                                fontSize: Provider.of<Settings>(context).fontSize,
-                              ),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  title: Text(
+                                    nameList.names[index],
+                                    style: TextStyle(
+                                      fontSize: Provider.of<Settings>(context).fontSize,
+                                    ),
+                                    textAlign: TextAlign.center, // Центрируем текст имени
+                                  ),
+                                  onLongPress: () {
+                                    _showEditDialog(
+                                      context,
+                                      index,
+                                      nameList.names[index],
+                                    ); // Редактирование при долгом нажатии
+                                  },
+                                ),
+                                // Добавляем линию (разделитель) под именем
+                                Container(
+                                  height: 2.0, // Высота линии
+                                  color: lineColor, // Цвет линии в зависимости от типа списка
+                                ),
+                              ],
                             ),
-                            onLongPress: () {
-                              _showEditDialog(
-                                context,
-                                index,
-                                nameList.names[index],
-                              ); // Редактирование при долгом нажатии
-                            },
-                          ),
-                          // Добавляем линию (разделитель) под именем
-                          Container(
-                            height: 2.0, // Высота линии
-                            color: lineColor, // Цвет линии в зависимости от типа списка
                           ),
                         ],
                       ),
