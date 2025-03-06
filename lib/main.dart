@@ -474,8 +474,7 @@ class NameListPage extends StatelessWidget {
   }
 
   void _showAddNameDialog(BuildContext context) {
-    final _formKey =
-        GlobalKey<FormState>(); // Ключ для управления состоянием формы
+    final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final nameController = TextEditingController();
 
     showDialog(
@@ -490,17 +489,14 @@ class NameListPage extends StatelessWidget {
               child: Form(
                 key: _formKey, // Подключаем ключ формы
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  // Позволяем колонке занимать минимальную высоту
+                  mainAxisSize: MainAxisSize.min, // Позволяем колонке занимать минимальную высоту
                   children: [
                     TextFormField(
                       controller: nameController,
                       decoration: InputDecoration(
                         hintText: 'Введите имя',
-                        errorStyle: TextStyle(color: Colors.red),
-                        // Стиль текста ошибки
-                        errorMaxLines:
-                            5, // Разрешаем перенос текста ошибки на 3 строки
+                        errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
+                        errorMaxLines: 5, // Разрешаем перенос текста ошибки на 5 строк
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -508,7 +504,7 @@ class NameListPage extends StatelessWidget {
                         }
 
                         // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
-                        final regex = RegExp(r'^[А-Яа-яЁё]+$',);
+                        final regex = RegExp(r'^[А-Яа-яЁё]+$');
                         if (!regex.hasMatch(value.trim())) {
                           return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
                         }
@@ -527,8 +523,13 @@ class NameListPage extends StatelessWidget {
                 // Проверяем валидацию
                 if (_formKey.currentState!.validate()) {
                   if (nameController.text.isNotEmpty) {
-                    onAddName(nameController.text);
-                    Navigator.of(context).pop(nameController.text);
+                    // Форматируем имя: первая буква заглавная, остальные маленькие
+                    String formattedName = nameController.text.trim();
+                    formattedName = formattedName[0].toUpperCase() +
+                        formattedName.substring(1).toLowerCase();
+
+                    onAddName(formattedName);
+                    Navigator.of(context).pop(formattedName);
                   }
                 }
               },
