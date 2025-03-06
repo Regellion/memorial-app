@@ -275,10 +275,8 @@ class NameListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String frameImage =
-        nameList.type == ListType.health
-            ? 'assets/images/health_frame.png'
-            : 'assets/images/repose_frame.png';
+    // Определение цвета линии в зависимости от типа списка
+    Color lineColor = nameList.type == ListType.health ? Colors.red : Colors.blue;
 
     return Stack(
       children: [
@@ -365,37 +363,40 @@ class NameListPage extends StatelessWidget {
                       ),
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.startToEnd) {
-                          bool? confirm = await _showDeleteConfirmDialog(
-                            context,
-                          );
+                          bool? confirm = await _showDeleteConfirmDialog(context);
                           if (confirm == true) {
                             onDeleteName(index); // Удаляем имя из списка
                             return true; // Подтверждение удаления
                           }
                         } else if (direction == DismissDirection.endToStart) {
-                          _showEditDialog(
-                            context,
-                            index,
-                            nameList.names[index],
-                          );
+                          _showEditDialog(context, index, nameList.names[index]);
                           return false; // Не удаляем элемент, просто открываем диалог
                         }
                         return false; // Если ничего не происходит
                       },
-                      child: ListTile(
-                        title: Text(
-                          nameList.names[index],
-                          style: TextStyle(
-                            fontSize: Provider.of<Settings>(context).fontSize,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: Text(
+                              nameList.names[index],
+                              style: TextStyle(
+                                fontSize: Provider.of<Settings>(context).fontSize,
+                              ),
+                            ),
+                            onLongPress: () {
+                              _showEditDialog(
+                                context,
+                                index,
+                                nameList.names[index],
+                              ); // Редактирование при долгом нажатии
+                            },
                           ),
-                        ),
-                        onLongPress: () {
-                          _showEditDialog(
-                            context,
-                            index,
-                            nameList.names[index],
-                          ); // Редактирование при долгом нажатии
-                        },
+                          // Добавляем линию (разделитель) под именем
+                          Container(
+                            height: 2.0, // Высота линии
+                            color: lineColor, // Цвет линии в зависимости от типа списка
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -408,9 +409,7 @@ class NameListPage extends StatelessWidget {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        _showAddNameDialog(
-                          context,
-                        ); // Показать диалог для добавления имени
+                        _showAddNameDialog(context); // Показать диалог для добавления имени
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(vertical: 16.0),
