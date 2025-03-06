@@ -508,10 +508,7 @@ class NameListPage extends StatelessWidget {
                         }
 
                         // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
-                        final regex = RegExp(
-                          r'^[А-Яа-яЁё]+$',
-                        ); //todo какие то проблемы с Ёё
-
+                        final regex = RegExp(r'^[А-Яа-яЁё]+$',);
                         if (!regex.hasMatch(value.trim())) {
                           return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
                         }
@@ -531,7 +528,7 @@ class NameListPage extends StatelessWidget {
                 if (_formKey.currentState!.validate()) {
                   if (nameController.text.isNotEmpty) {
                     onAddName(nameController.text);
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(nameController.text);
                   }
                 }
               },
