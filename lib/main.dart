@@ -378,16 +378,18 @@ class NameListPage extends StatelessWidget {
                       ),
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.startToEnd) {
+                          // Показываем диалог подтверждения удаления
                           bool? confirm = await _showDeleteConfirmDialog(context);
-                          if (confirm == true) {
-                            onDeleteName(index); // Удаляем имя из списка
-                            return true; // Подтверждение удаления
-                          }
+                          return confirm == true;
                         } else if (direction == DismissDirection.endToStart) {
                           _showEditDialog(context, index, nameList.names[index]);
                           return false; // Не удаляем элемент, просто открываем диалог
                         }
-                        return false; // Если ничего не происходит
+                        return false;
+                      },
+                      onDismissed: (direction) {
+                        // Удаляем имя из списка при выполнении жеста
+                        onDeleteName(index); // Удаляем элемент из списка
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center, // Центрируем все содержимое в строке
