@@ -15,13 +15,20 @@ void main() {
 class NameListApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Мой приход',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: NameListHome(), // По умолчанию открывается "Помянник"
+    return Consumer<Settings>(
+      builder: (context, settings, child) {
+        return MaterialApp(
+          title: 'Мой приход',
+          theme: ThemeData(
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+          ),
+          darkTheme: ThemeData.dark().copyWith(
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+          ),
+          themeMode: settings.themeMode, // Используем выбранную тему
+          home: NameListHome(), // По умолчанию открывается "Помянник"
+        );
+      },
     );
   }
 }
@@ -303,7 +310,7 @@ class NameListPage extends StatelessWidget {
             right: 16,
           ), // Отступы
           decoration: BoxDecoration(
-            color: Colors.white, // Фон для содержимого списка
+            color: Theme.of(context).scaffoldBackgroundColor, // Используем цвет фона из темы
             borderRadius: BorderRadius.circular(8.0),
             boxShadow: [
               BoxShadow(
@@ -708,6 +715,15 @@ class SettingsPage extends StatelessWidget {
                   settings.setFontSize(value);
                 },
               ),
+            ),
+          ),
+          ListTile(
+            title: Text('Тема приложения'),
+            trailing: Switch(
+              value: settings.themeMode == ThemeMode.dark,
+              onChanged: (value) {
+                settings.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+              },
             ),
           ),
         ],
