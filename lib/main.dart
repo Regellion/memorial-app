@@ -411,6 +411,9 @@ class NameListPage extends StatelessWidget {
                                       nameList.names[index],
                                       style: TextStyle(
                                         fontSize: Provider.of<Settings>(context).fontSize,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.grey // Серый цвет для темной темы
+                                            : null, // Цвет по умолчанию для светлой темы
                                       ),
                                       textAlign: TextAlign.center, // Центрируем текст имени
                                     ),
