@@ -358,73 +358,76 @@ class NameListPage extends StatelessWidget {
                 child: Image.asset(frameImage), // Отображаем картинку вместо текста
               ),
               Expanded(
-                child: ListView.builder(
-                  itemCount: nameList.names.length,
-                  itemBuilder: (context, index) {
-                    return Dismissible(
-                      key: Key(nameList.names[index]),
-                      direction: DismissDirection.horizontal,
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerLeft,
-                        padding: EdgeInsets.only(left: 16.0),
-                        child: Icon(Icons.delete, color: Colors.white),
-                      ),
-                      secondaryBackground: Container(
-                        color: Colors.blue,
-                        alignment: Alignment.centerRight,
-                        padding: EdgeInsets.only(right: 16.0),
-                        child: Icon(Icons.edit, color: Colors.white),
-                      ),
-                      confirmDismiss: (direction) async {
-                        if (direction == DismissDirection.startToEnd) {
-                          // Показываем диалог подтверждения удаления
-                          bool? confirm = await _showDeleteConfirmDialog(context);
-                          return confirm == true;
-                        } else if (direction == DismissDirection.endToStart) {
-                          _showEditDialog(context, index, nameList.names[index]);
-                          return false; // Не удаляем элемент, просто открываем диалог
-                        }
-                        return false;
-                      },
-                      onDismissed: (direction) {
-                        // Удаляем имя из списка при выполнении жеста
-                        onDeleteName(index); // Удаляем элемент из списка
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center, // Центрируем все содержимое в строке
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  title: Text(
-                                    nameList.names[index],
-                                    style: TextStyle(
-                                      fontSize: Provider.of<Settings>(context).fontSize,
-                                    ),
-                                    textAlign: TextAlign.center, // Центрируем текст имени
-                                  ),
-                                  onLongPress: () {
-                                    _showEditDialog(
-                                      context,
-                                      index,
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.75, // 75% от ширины экрана
+                  child: ListView.builder(
+                    itemCount: nameList.names.length,
+                    itemBuilder: (context, index) {
+                      return Dismissible(
+                        key: Key(nameList.names[index]),
+                        direction: DismissDirection.horizontal,
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerLeft,
+                          padding: EdgeInsets.only(left: 16.0),
+                          child: Icon(Icons.delete, color: Colors.white),
+                        ),
+                        secondaryBackground: Container(
+                          color: Colors.blue,
+                          alignment: Alignment.centerRight,
+                          padding: EdgeInsets.only(right: 16.0),
+                          child: Icon(Icons.edit, color: Colors.white),
+                        ),
+                        confirmDismiss: (direction) async {
+                          if (direction == DismissDirection.startToEnd) {
+                            // Показываем диалог подтверждения удаления
+                            bool? confirm = await _showDeleteConfirmDialog(context);
+                            return confirm == true;
+                          } else if (direction == DismissDirection.endToStart) {
+                            _showEditDialog(context, index, nameList.names[index]);
+                            return false; // Не удаляем элемент, просто открываем диалог
+                          }
+                          return false;
+                        },
+                        onDismissed: (direction) {
+                          // Удаляем имя из списка при выполнении жеста
+                          onDeleteName(index); // Удаляем элемент из списка
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center, // Центрируем все содержимое в строке
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    title: Text(
                                       nameList.names[index],
-                                    ); // Редактирование при долгом нажатии
-                                  },
-                                ),
-                                // Добавляем линию (разделитель) под именем
-                                Container(
-                                  height: 2.0, // Высота линии
-                                  color: lineColor, // Цвет линии в зависимости от типа списка
-                                ),
-                              ],
+                                      style: TextStyle(
+                                        fontSize: Provider.of<Settings>(context).fontSize,
+                                      ),
+                                      textAlign: TextAlign.center, // Центрируем текст имени
+                                    ),
+                                    onLongPress: () {
+                                      _showEditDialog(
+                                        context,
+                                        index,
+                                        nameList.names[index],
+                                      ); // Редактирование при долгом нажатии
+                                    },
+                                  ),
+                                  // Добавляем линию (разделитель) под именем
+                                  Container(
+                                    height: 2.0, // Высота линии
+                                    color: lineColor, // Цвет линии в зависимости от типа списка
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
               Padding(
