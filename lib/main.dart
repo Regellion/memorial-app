@@ -108,21 +108,40 @@ class _NameListHomeState extends State<NameListHome> {
       appBar: AppBar(
         title: Text('Помянник'),
         actions: [
-          IconButton(
-            onPressed: () {
-              // Переход в страницу настроек
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SettingsPage()),
-              );
-            },
-            icon: Icon(Icons.settings), // Значок настроек
-          ),
-          FloatingActionButton(
-            onPressed: () {
-              _showAddListDialog(context);
-            },
-            child: Icon(Icons.add),
+          // Ползунок для выбора темы
+          Row(
+            children: [
+              // Иконка луны (темная тема) слева от ползунка
+              Icon(
+                Icons.wb_sunny, // Иконка для темной темы
+                color: Colors.grey,
+              ),
+              Switch(
+                value: Theme.of(context).brightness == Brightness.dark,
+                onChanged: (value) {
+                  final settings = Provider.of<Settings>(context, listen: false);
+                  settings.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+                },
+                activeColor: Colors.white, // Цвет ползунка в активном состоянии
+                inactiveThumbColor: Colors.white, // Цвет ползунка в неактивном состоянии
+              ),
+              // Иконка солнца (светлая тема) справа от ползунка
+              Icon(
+                Icons.nightlight_round, // Иконка для светлой темы
+                color: Colors.grey,
+              ),
+              SizedBox(width: 8), // Отступ между иконкой солнца и кнопкой настроек
+              IconButton(
+                onPressed: () {
+                  // Переход в страницу настроек
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SettingsPage()),
+                  );
+                },
+                icon: Icon(Icons.settings), // Значок настроек
+              ),
+            ],
           ),
         ],
         automaticallyImplyLeading: true, // Показывать иконку меню
@@ -666,17 +685,43 @@ class NewsPage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Новости'),
         actions: [
-          IconButton(
-            onPressed: () {
-              // Переход в страницу настроек
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SettingsPage()),
-              );
-            },
-            icon: Icon(Icons.settings), // Значок настроек
+          // Ползунок для выбора темы
+          Row(
+            children: [
+              // Иконка луны (темная тема) слева от ползунка
+              Icon(
+                Icons.wb_sunny, // Иконка для темной темы
+                color: Colors.grey,
+              ),
+              Switch(
+                value: Theme.of(context).brightness == Brightness.dark,
+                onChanged: (value) {
+                  final settings = Provider.of<Settings>(context, listen: false);
+                  settings.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+                },
+                activeColor: Colors.white, // Цвет ползунка в активном состоянии
+                inactiveThumbColor: Colors.white, // Цвет ползунка в неактивном состоянии
+              ),
+              // Иконка солнца (светлая тема) справа от ползунка
+              Icon(
+                Icons.nightlight_round, // Иконка для светлой темы
+                color: Colors.grey,
+              ),
+              SizedBox(width: 8), // Отступ между иконкой солнца и кнопкой настроек
+              IconButton(
+                onPressed: () {
+                  // Переход в страницу настроек
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SettingsPage()),
+                  );
+                },
+                icon: Icon(Icons.settings), // Значок настроек
+              ),
+            ],
           ),
         ],
+        automaticallyImplyLeading: true, // Показывать иконку меню
       ),
       body: Center(child: Text('Здесь будут новости приложения')),
     );
@@ -722,11 +767,26 @@ class SettingsPage extends StatelessWidget {
           ),
           ListTile(
             title: Text('Тема приложения'),
-            trailing: Switch(
-              value: settings.themeMode == ThemeMode.dark,
-              onChanged: (value) {
-                settings.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
-              },
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min, // Чтобы Row занимал минимальное пространство
+              children: [
+                // Иконка луны (темная тема) слева от ползунка
+                Icon(
+                  Icons.wb_sunny, // Иконка для темной темы
+                  color: Colors.grey,
+                ),
+                Switch(
+                  value: settings.themeMode == ThemeMode.dark,
+                  onChanged: (value) {
+                    settings.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+                  },
+                ),
+                // Иконка солнца (светлая тема) справа от ползунка
+                Icon(
+                  Icons.nightlight_round, // Иконка для светлой темы
+                  color: Colors.grey,
+                ),
+              ],
             ),
           ),
         ],
