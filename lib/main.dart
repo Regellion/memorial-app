@@ -143,6 +143,12 @@ class _NameListHomeState extends State<NameListHome> {
               ),
             ],
           ),
+          FloatingActionButton(
+            onPressed: () {
+              _showAddListDialog(context);
+            },
+            child: Icon(Icons.add),
+          ),
         ],
         automaticallyImplyLeading: true, // Показывать иконку меню
       ),
