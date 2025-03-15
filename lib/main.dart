@@ -6,8 +6,10 @@ import 'database_helper.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => Settings(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => Settings()),
+      ],
       child: NameListApp(),
     ),
   );
@@ -216,6 +218,7 @@ class _NameListHomeState extends State<NameListHome> {
         itemBuilder: (context, index) {
           final nameList = _nameLists[index];
           return NameListPage(
+            key: ValueKey(nameList['id']), // Передаем key сюда
             nameList: nameList,
             onAddName: (name) => _addNameToList(nameList['id'], name),
             onEditName: (nameId, newName) => _editNameInList(nameId, newName),
@@ -291,7 +294,7 @@ class _NameListHomeState extends State<NameListHome> {
   }
 }
 
-class NameListPage extends StatelessWidget {
+class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;
   final Function(String) onAddName;
   final Function(int, String) onEditName;
@@ -299,18 +302,57 @@ class NameListPage extends StatelessWidget {
   final Function(String) onEditTitle;
   final VoidCallback onDeleteList;
 
+  // Добавляем key в конструктор
   NameListPage({
+    Key? key, // Добавляем параметр key
     required this.nameList,
     required this.onAddName,
     required this.onEditName,
     required this.onDeleteName,
     required this.onEditTitle,
     required this.onDeleteList,
-  });
+  }) : super(key: key); // Передаем key в super
+
+  @override
+  _NameListPageState createState() => _NameListPageState();
+}
+
+class _NameListPageState extends State<NameListPage> {
+  List<Map<String, dynamic>> _names = [];
+  late DatabaseHelper _dbHelper;
+
+  @override
+  void initState() {
+    super.initState();
+    _dbHelper = DatabaseHelper();
+    _loadNames();
+  }
+
+  Future<void> _loadNames() async {
+    final names = await _dbHelper.loadNames(widget.nameList['id']);
+    setState(() {
+      _names = names;
+    });
+  }
+
+  Future<void> _addName(String name) async {
+    await widget.onAddName(name);
+    await _loadNames();
+  }
+
+  Future<void> _editName(int nameId, String newName) async {
+    await widget.onEditName(nameId, newName);
+    await _loadNames();
+  }
+
+  Future<void> _deleteName(int nameId) async {
+    await widget.onDeleteName(nameId);
+    await _loadNames();
+  }
 
   @override
   Widget build(BuildContext context) {
-    String frameImage = nameList['type'] == 0
+    String frameImage = widget.nameList['type'] == 0
         ? 'assets/images/health_frame_title.png'
         : 'assets/images/repose_frame_title.png';
 
@@ -319,196 +361,185 @@ class NameListPage extends StatelessWidget {
     double screenHeight = MediaQuery.of(context).size.height;
 
     // Устанавливаем размеры контейнера в зависимости от размера экрана
-    // Например, ширина 30% от ширины экрана, а высота 20% от высоты экрана
     double containerWidth = screenWidth * 0.5; // 50% от ширины экрана
     double containerHeight = screenHeight * 0.1; // 10% от высоты экрана
 
-    Color lineColor = nameList['type'] == 0 ? Colors.red : Colors.blue;
+    Color lineColor = widget.nameList['type'] == 0 ? Colors.red : Colors.blue;
 
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DatabaseHelper().loadNames(nameList['id']),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Ошибка загрузки данных'));
-        } else {
-          final names = snapshot.data!;
-          return Stack(
-            children: [
-              Container(
-                padding: EdgeInsets.only(
-                  top: 40.0,
-                  bottom: 70.0,
-                  left: 16,
-                  right: 16,
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            padding: EdgeInsets.only(
+              top: 40.0,
+              bottom: 70.0,
+              left: 16,
+              right: 16,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(8.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 2,
+                  blurRadius: 5,
+                  offset: Offset(0, 2),
                 ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(8.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onLongPress: () {
-                                _showEditTitleDialog(context, nameList['title']);
-                              },
-                              child: Text(
-                                nameList['title'],
-                                style: TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey,
-                                ),
-                              ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onLongPress: () {
+                            _showEditTitleDialog(context, widget.nameList['title']);
+                          },
+                          child: Text(
+                            widget.nameList['title'],
+                            style: TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
                             ),
                           ),
-                          IconButton(
-                            icon: Icon(Icons.edit),
-                            onPressed: () {
-                              _showEditTitleDialog(context, nameList['title']);
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () {
-                              _showDeleteListDialog(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      height: containerHeight,
-                      width: containerWidth,
-                      child: Image.asset(frameImage),
-                    ),
-                    Expanded(
-                      child: Container(
-                        width: MediaQuery.of(context).size.width * 0.75,
-                        child: ListView.builder(
-                          itemCount: names.length,
-                          itemBuilder: (context, index) {
-                            final name = names[index];
-                            return Dismissible(
-                              key: Key(name['id'].toString()),
-                              direction: DismissDirection.horizontal,
-                              background: Container(
-                                color: Colors.red,
-                                alignment: Alignment.centerLeft,
-                                padding: EdgeInsets.only(left: 16.0),
-                                child: Icon(Icons.delete, color: Colors.white),
-                              ),
-                              secondaryBackground: Container(
-                                color: Colors.blue,
-                                alignment: Alignment.centerRight,
-                                padding: EdgeInsets.only(right: 16.0),
-                                child: Icon(Icons.edit, color: Colors.white),
-                              ),
-                              confirmDismiss: (direction) async {
-                                if (direction == DismissDirection.startToEnd) {
-                                  bool? confirm = await _showDeleteConfirmDialog(context);
-                                  return confirm == true;
-                                } else if (direction == DismissDirection.endToStart) {
-                                  _showEditDialog(context, name['id'], name['name']);
-                                  return false;
-                                }
-                                return false;
-                              },
-                              onDismissed: (direction) {
-                                onDeleteName(name['id']);
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      children: [
-                                        ListTile(
-                                          title: Text(
-                                            name['name'],
-                                            style: TextStyle(
-                                              fontSize: Provider.of<Settings>(context).fontSize,
-                                              color: Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.grey
-                                                  : null,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          onLongPress: () {
-                                            _showEditDialog(context, name['id'], name['name']);
-                                          },
-                                        ),
-                                        Container(
-                                          height: 2.0,
-                                          color: lineColor,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              _showAddNameDialog(context);
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 16.0),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.blue),
-                                borderRadius: BorderRadius.circular(8.0),
-                                color: Colors.transparent,
-                              ),
-                              child: Text(
-                                "Добавить имя",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () {
+                          _showEditTitleDialog(context, widget.nameList['title']);
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () {
+                          _showDeleteListDialog(context);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: containerHeight,
+                  width: containerWidth,
+                  child: Image.asset(frameImage),
+                ),
+                Expanded(
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: ListView.builder(
+                      itemCount: _names.length,
+                      itemBuilder: (context, index) {
+                        final name = _names[index];
+                        return Dismissible(
+                          key: ValueKey(name['id']), // Используем ValueKey
+                          direction: DismissDirection.horizontal,
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.only(left: 16.0),
+                            child: Icon(Icons.delete, color: Colors.white),
                           ),
-                          SizedBox(height: 4.0),
-                          Text(
-                            "Имя пишется в Родительном падеже",
-                            style: TextStyle(color: Colors.grey),
+                          secondaryBackground: Container(
+                            color: Colors.blue,
+                            alignment: Alignment.centerRight,
+                            padding: EdgeInsets.only(right: 16.0),
+                            child: Icon(Icons.edit, color: Colors.white),
+                          ),
+                          confirmDismiss: (direction) async {
+                            if (direction == DismissDirection.startToEnd) {
+                              bool? confirm = await _showDeleteConfirmDialog(context);
+                              return confirm == true;
+                            } else if (direction == DismissDirection.endToStart) {
+                              _showEditDialog(context, name['id'], name['name']);
+                              return false;
+                            }
+                            return false;
+                          },
+                          onDismissed: (direction) {
+                            widget.onDeleteName(name['id']);
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    ListTile(
+                                      title: Text(
+                                        name['name'],
+                                        style: TextStyle(
+                                          fontSize: Provider.of<Settings>(context).fontSize,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.grey
+                                              : null,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      onLongPress: () {
+                                        _showEditDialog(context, name['id'], name['name']);
+                                      },
+                                    ),
+                                    Container(
+                                      height: 2.0,
+                                      color: lineColor,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          _showAddNameDialog(context);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.blue),
+                            borderRadius: BorderRadius.circular(8.0),
+                            color: Colors.transparent,
+                          ),
+                          child: Text(
+                            "Добавить имя",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue,
+                            ),
                             textAlign: TextAlign.center,
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 4.0),
+                      Text(
+                        "Имя пишется в Родительном падеже",
+                        style: TextStyle(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          );
-        }
-      },
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -593,9 +624,8 @@ class NameListPage extends StatelessWidget {
                     String formattedName = nameController.text.trim();
                     formattedName = formattedName[0].toUpperCase() +
                         formattedName.substring(1).toLowerCase();
-
-                    onAddName(formattedName);
-                    Navigator.of(context).pop(formattedName);
+                    _addName(formattedName);
+                    Navigator.of(context).pop();
                   }
                 }
               },
@@ -622,7 +652,7 @@ class NameListPage extends StatelessWidget {
             TextButton(
               onPressed: () {
                 if (nameController.text.isNotEmpty) {
-                  onEditName(nameId, nameController.text);
+                  _editName(nameId, nameController.text);
                   Navigator.of(context).pop();
                 }
               },
@@ -648,7 +678,7 @@ class NameListPage extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () {
-                onEditTitle(titleController.text);
+                widget.onEditTitle(titleController.text);
                 Navigator.of(context).pop();
               },
               child: Text('Сохранить'),
@@ -675,7 +705,7 @@ class NameListPage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                onDeleteList();
+                widget.onDeleteList();
                 Navigator.of(context).pop();
               },
               child: Text('Удалить'),
