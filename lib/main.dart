@@ -102,8 +102,15 @@ class _NameListHomeState extends State<NameListHome> {
   }
 
   Future<void> _editListTitle(int nameListId, String newTitle) async {
-    await _dbHelper.updateNameListTitle(nameListId, newTitle);
-    await _loadNameLists();
+    // Получаем текущее название списка
+    final currentList = _nameLists.firstWhere((list) => list['id'] == nameListId);
+    final currentTitle = currentList['title'];
+
+    // Проверяем, что новое название отличается от старого
+    if (newTitle != currentTitle) {
+      await _dbHelper.updateNameListTitle(nameListId, newTitle);
+      await _loadNameLists(); // Перезагружаем списки
+    }
   }
 
   Future<void> _deleteList(int nameListId) async {
@@ -342,8 +349,14 @@ class _NameListPageState extends State<NameListPage> {
   }
 
   Future<void> _editName(int nameId, String newName) async {
-    await widget.onEditName(nameId, newName);
-    await _loadNames();
+    // Получаем текущее имя
+    final currentName = _names.firstWhere((name) => name['id'] == nameId)['name'];
+
+    // Преобразуем оба имени в нижний регистр и сравниваем
+    if (newName.toLowerCase() != currentName.toLowerCase()) {
+      await widget.onEditName(nameId, newName);
+      await _loadNames(); // Перезагружаем имена
+    }
   }
 
   Future<void> _deleteName(int nameId) async {
