@@ -332,7 +332,7 @@ class _NameListPageState extends State<NameListPage> {
   Future<void> _loadNames() async {
     final names = await _dbHelper.loadNames(widget.nameList['id']);
     setState(() {
-      _names = names;
+      _names = List<Map<String, dynamic>>.from(names); // Создаем изменяемую копию
     });
   }
 
@@ -463,7 +463,10 @@ class _NameListPageState extends State<NameListPage> {
                             return false;
                           },
                           onDismissed: (direction) {
-                            widget.onDeleteName(name['id']);
+                            setState(() {
+                              _names.removeAt(index); // Удаляем элемент из изменяемого списка
+                            });
+                            widget.onDeleteName(name['id']); // Удаляем элемент из базы данных
                           },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
