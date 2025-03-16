@@ -108,7 +108,8 @@ class _NameListHomeState extends State<NameListHome> {
 
   Future<void> _deleteList(int nameListId) async {
     await _dbHelper.deleteNameList(nameListId);
-    await _loadNameLists(); // Перезагружаем списки
+    // Перезагружаем списки
+    await _loadNameLists();
     // Если удалённый список был текущим, переключаемся на первый список
     if (_currentListId == nameListId) {
       setState(() {
