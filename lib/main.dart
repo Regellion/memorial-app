@@ -80,12 +80,12 @@ class _NameListHomeState extends State<NameListHome> {
     });
   }
 
-  Future<void> _addNameToList(int nameListId, String name) async {
-    await _dbHelper.addName(nameListId, name);
+  Future<void> _addNameToList(int nameListId, String name, int gender, String? status, String? rank) async {
+    await _dbHelper.addName(nameListId, name, gender, status, rank);
   }
 
-  Future<void> _editNameInList(int nameId, String newName) async {
-    await _dbHelper.updateName(nameId, newName);
+  Future<void> _editNameInList(int nameId, String newName, int gender, String? status, String? rank) async {
+    await _dbHelper.updateName(nameId, newName, gender, status, rank);
   }
 
   Future<void> _deleteNameFromList(int nameId) async {
@@ -228,8 +228,8 @@ class _NameListHomeState extends State<NameListHome> {
           return NameListPage(
             key: ValueKey(nameList['id']), // Передаем key сюда
             nameList: nameList,
-            onAddName: (name) => _addNameToList(nameList['id'], name),
-            onEditName: (nameId, newName) => _editNameInList(nameId, newName),
+            onAddName: (name, gender, status, rank) => _addNameToList(nameList['id'], name, gender, status, rank),
+            onEditName: (nameId, newName, gender, status, rank) => _editNameInList(nameId, newName, gender, status, rank),
             onDeleteName: (nameId) => _deleteNameFromList(nameId),
             onEditTitle: (newTitle) => _editListTitle(nameList['id'], newTitle),
             onDeleteList: () => _deleteList(nameList['id']),
@@ -304,8 +304,8 @@ class _NameListHomeState extends State<NameListHome> {
 
 class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;
-  final Function(String) onAddName;
-  final Function(int, String) onEditName;
+  final Function(String, int, String?, String?) onAddName;
+  final Function(int, String, int, String?, String?) onEditName;
   final Function(int) onDeleteName;
   final Function(String) onEditTitle;
   final VoidCallback onDeleteList;
@@ -343,22 +343,30 @@ class _NameListPageState extends State<NameListPage> {
     });
   }
 
-  Future<void> _addName(String name) async {
-    await widget.onAddName(name);
+  Future<void> _addName(String name, int gender, String? status, String? rank) async {
+    await widget.onAddName(name, gender, status, rank);
     await _loadNames();
   }
 
-  Future<void> _editName(int nameId, String newName) async {
+  Future<void> _editName(int nameId, String newName, int gender, String? status, String? rank) async {
     // Получаем текущее имя
-    final currentName = _names.firstWhere((name) => name['id'] == nameId)['name'];
+    final name = _names.firstWhere((name) => name['id'] == nameId);
+    final currentName = name['name'];
+    final currentGender = name['gender'];
+    final currentStatus = name['status'];
+    final currentRank = name['rank'];
 
     // Форматируем новое имя: первая буква заглавная, остальные маленькие
     String formattedName = newName.trim();
     formattedName = formattedName[0].toUpperCase() + formattedName.substring(1).toLowerCase();
 
     // Преобразуем оба имени в нижний регистр и сравниваем
-    if (formattedName.toLowerCase() != currentName.toLowerCase()) {
-      await widget.onEditName(nameId, formattedName);
+    if (formattedName.toLowerCase() != currentName.toLowerCase()||
+        gender != currentGender ||
+        status != currentStatus ||
+        rank != currentRank) {
+      // Если данные изменились, вызываем метод редактирования
+      await widget.onEditName(nameId, formattedName, gender, status, rank);
       await _loadNames(); // Перезагружаем имена
     }
   }
@@ -454,6 +462,9 @@ class _NameListPageState extends State<NameListPage> {
                       itemCount: _names.length,
                       itemBuilder: (context, index) {
                         final name = _names[index];
+                        final status = name['status']?.toString() ?? ''; // Получаем статус, если он есть
+                        final rank = name['rank']?.toString() ?? ''; // Получаем сан, если он есть
+
                         return Dismissible(
                           key: ValueKey(name['id']), // Используем ValueKey
                           direction: DismissDirection.horizontal,
@@ -493,7 +504,11 @@ class _NameListPageState extends State<NameListPage> {
                                   children: [
                                     ListTile(
                                       title: Text(
-                                        name['name'],
+                                        [
+                                          if (status.isNotEmpty) status,
+                                          if (rank.isNotEmpty) rank,
+                                          name['name'],
+                                        ].join(' '),
                                         style: TextStyle(
                                           fontSize: Provider.of<Settings>(context).fontSize,
                                           color: Theme.of(context).brightness == Brightness.dark
@@ -595,6 +610,15 @@ class _NameListPageState extends State<NameListPage> {
     final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final nameController = TextEditingController();
 
+    int selectedGender = 1; // По умолчанию выбран мужской пол
+    String? selectedStatus;
+    String? selectedRank;
+
+    // Списки для выбора статуса и сана
+    //todo
+    final List<String> statusOptions = ['болящий', 'воин', 'новопреставленный'];
+    final List<String> rankOptions = ['мирянин', 'монах', 'священник', 'епископ'];
+
     showDialog(
       context: context,
       builder: (context) {
@@ -630,6 +654,47 @@ class _NameListPageState extends State<NameListPage> {
                         return null; // Валидация пройдена
                       },
                     ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      value: selectedGender,
+                      //todo
+                      decoration: InputDecoration(labelText: 'Пол'),
+                      items: [
+                        DropdownMenuItem(value: 1, child: Text('Мужской')),
+                        DropdownMenuItem(value: 0, child: Text('Женский')),
+                      ],
+                      onChanged: (value) {
+                        selectedGender = value!;
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedStatus,
+                      decoration: InputDecoration(labelText: 'Статус'),
+                      items: statusOptions.map((status) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Text(status),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        selectedStatus = value;
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedRank,
+                      decoration: InputDecoration(labelText: 'Сан'),
+                      items: rankOptions.map((rank) {
+                        return DropdownMenuItem(
+                          value: rank,
+                          child: Text(rank),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        selectedRank = value;
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -645,7 +710,7 @@ class _NameListPageState extends State<NameListPage> {
                     String formattedName = nameController.text.trim();
                     formattedName = formattedName[0].toUpperCase() +
                         formattedName.substring(1).toLowerCase();
-                    _addName(formattedName);
+                    _addName(formattedName, selectedGender, selectedStatus, selectedRank);
                     Navigator.of(context).pop();
                   }
                 }
@@ -660,20 +725,88 @@ class _NameListPageState extends State<NameListPage> {
 
   void _showEditDialog(BuildContext context, int nameId, String currentName) {
     final nameController = TextEditingController(text: currentName);
+
+    // Получаем текущие данные имени
+    final name = _names.firstWhere((name) => name['id'] == nameId);
+    int selectedGender = name['gender'] ?? 1; // По умолчанию мужской пол
+    String? selectedStatus = name['status']?.toString();
+    String? selectedRank = name['rank']?.toString();
+    //todo
+    // Списки для выбора статуса и сана
+    final List<String> statusOptions = ['болящий', 'воин', 'новопреставленный'];
+    final List<String> rankOptions = ['мирянин', 'монах', 'священник', 'епископ'];
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text('Редактировать имя'),
-          content: TextField(
-            controller: nameController,
-            decoration: InputDecoration(hintText: 'Введите новое имя'),
+          content: SingleChildScrollView(
+            child: Container(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(hintText: 'Введите новое имя'),
+                  ),
+                  SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: selectedGender,
+                    //todo
+                    decoration: InputDecoration(labelText: 'Пол'),
+                    items: [
+                      DropdownMenuItem(value: 1, child: Text('Мужской')),
+                      DropdownMenuItem(value: 0, child: Text('Женский')),
+                    ],
+                    onChanged: (value) {
+                      selectedGender = value!;
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedStatus,
+                    decoration: InputDecoration(labelText: 'Статус'),
+                    items: statusOptions.map((status) {
+                      return DropdownMenuItem(
+                        value: status,
+                        child: Text(status),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      selectedStatus = value;
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedRank,
+                    decoration: InputDecoration(labelText: 'Сан'),
+                    items: rankOptions.map((rank) {
+                      return DropdownMenuItem(
+                        value: rank,
+                        child: Text(rank),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      selectedRank = value;
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 if (nameController.text.isNotEmpty) {
-                  _editName(nameId, nameController.text);
+                  // Форматируем имя: первая буква заглавная, остальные маленькие
+                  String formattedName = nameController.text.trim();
+                  formattedName = formattedName[0].toUpperCase() +
+                      formattedName.substring(1).toLowerCase();
+
+                  // Вызываем метод редактирования имени с новыми параметрами
+                  _editName(nameId, formattedName, selectedGender, selectedStatus, selectedRank);
                   Navigator.of(context).pop();
                 }
               },

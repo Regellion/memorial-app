@@ -1,8 +1,26 @@
+import 'dart:async';
+
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseHelper {
+  Future<String> _getAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    return packageInfo.version; // Например, "1.2.3"
+  }
+
+  Future<int> convertVersionToNumber() async {
+    String version = await _getAppVersion();
+    final parts = version.split('.'); // Разделяем на мажорную, минорную и патч-версии
+    final major = int.parse(parts[0]);
+    final minor = int.parse(parts[1]);
+    final patch = int.parse(parts[2]);
+    return major * 10000 + minor * 100 + patch; // Преобразуем в число
+  }
+
   static final DatabaseHelper _instance = DatabaseHelper._internal();
+  int _dbVersion = 1;
   static Database? _database;
 
   factory DatabaseHelper() {
@@ -22,11 +40,14 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'app_database.db');
 
+    _dbVersion = await convertVersionToNumber();
+
     // Открываем базу данных
     final db = await openDatabase(
       path,
-      version: 1, // Версия базы данных
+      version: _dbVersion, // Версия базы данных
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
 
     return db;
@@ -72,9 +93,12 @@ class DatabaseHelper {
       '''
         CREATE TABLE IF NOT EXISTS names(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name_lists_id INTEGER NOT NULL,
+          name_list_id INTEGER NOT NULL,
           name TEXT NOT NULL,
-          FOREIGN KEY (name_lists_id) REFERENCES name_lists(id) ON DELETE CASCADE
+          status TEXT,
+          rank TEXT,
+          gender INTEGER NOT NULL DEFAULT 1,
+          FOREIGN KEY (name_list_id) REFERENCES name_lists(id) ON DELETE CASCADE
         );
       '''
     );
@@ -126,7 +150,7 @@ class DatabaseHelper {
     final db = await database;
     return await db.query(
       'names',
-      where: 'name_lists_id = ?',
+      where: 'name_list_id = ?',
       whereArgs: [nameListId],
     );
   }
@@ -138,9 +162,15 @@ class DatabaseHelper {
   }
 
   // Добавление имени
-  Future<void> addName(int nameListId, String name) async {
+  Future<int> addName(int nameListId, String name, int gender, String? status, String? rank) async {
     final db = await database;
-    await db.insert('names', {'name_lists_id': nameListId, 'name': name});
+    return await db.insert('names', {
+      'name_list_id': nameListId,
+      'name': name,
+      'gender': gender,
+      'status': status,
+      'rank': rank,
+    });
   }
 
   // Удаление списка
@@ -155,13 +185,18 @@ class DatabaseHelper {
     await db.delete('names', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> updateName(int id, String newName) async {
+  Future<void> updateName(int nameId, String newName, int gender, String? status, String? rank) async {
     final db = await database;
     await db.update(
       'names',
-      {'name': newName},
+      {
+        'name': newName,
+        'gender': gender,
+        'status': status,
+        'rank': rank,
+      },
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [nameId],
     );
   }
 
@@ -173,5 +208,12 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion == 10000) { //версия 1.0.0
+    }
+    if (oldVersion <= 20000) { //версия 2.0.0
+    }
   }
 }
