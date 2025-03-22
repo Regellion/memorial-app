@@ -352,9 +352,13 @@ class _NameListPageState extends State<NameListPage> {
     // Получаем текущее имя
     final currentName = _names.firstWhere((name) => name['id'] == nameId)['name'];
 
+    // Форматируем новое имя: первая буква заглавная, остальные маленькие
+    String formattedName = newName.trim();
+    formattedName = formattedName[0].toUpperCase() + formattedName.substring(1).toLowerCase();
+
     // Преобразуем оба имени в нижний регистр и сравниваем
-    if (newName.toLowerCase() != currentName.toLowerCase()) {
-      await widget.onEditName(nameId, newName);
+    if (formattedName.toLowerCase() != currentName.toLowerCase()) {
+      await widget.onEditName(nameId, formattedName);
       await _loadNames(); // Перезагружаем имена
     }
   }
