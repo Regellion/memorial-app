@@ -326,6 +326,10 @@ class NameListPage extends StatefulWidget {
 }
 
 class _NameListPageState extends State<NameListPage> {
+  // Текущий список статусов, который будет обновляться динамически
+  List<String> _currentStatusOptions = [];
+  List<String> _currentRankOptions = [];
+
   List<Map<String, dynamic>> _names = [];
   late DatabaseHelper _dbHelper;
 
@@ -369,11 +373,6 @@ class _NameListPageState extends State<NameListPage> {
       await widget.onEditName(nameId, formattedName, gender, status, rank);
       await _loadNames(); // Перезагружаем имена
     }
-  }
-
-  Future<void> _deleteName(int nameId) async {
-    await widget.onDeleteName(nameId);
-    await _loadNames();
   }
 
   @override
@@ -606,6 +605,17 @@ class _NameListPageState extends State<NameListPage> {
         Future.value(false);
   }
 
+  void _updateStatusOptions(int listType, int gender) {
+    if (listType == 0) { // О здравии
+      _currentStatusOptions = gender == 1 ? _healthStatusMale : _healthStatusFemale;
+    } else { // Об упокоении
+      _currentStatusOptions = gender == 1 ? _reposeStatusMale : _reposeStatusFemale;
+    }
+
+    // Обновляем список сана
+    _currentRankOptions = gender == 1 ? _rankOptionsMale : _rankOptionsFemale;
+  }
+
   void _showAddNameDialog(BuildContext context) {
     final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final nameController = TextEditingController();
@@ -614,110 +624,118 @@ class _NameListPageState extends State<NameListPage> {
     String? selectedStatus;
     String? selectedRank;
 
-    // Списки для выбора статуса и сана
-    //todo
-    final List<String> statusOptions = ['болящий', 'воин', 'новопреставленный'];
-    final List<String> rankOptions = ['мирянин', 'монах', 'священник', 'епископ'];
+    // Инициализируем список статусов в зависимости от типа списка
+    _updateStatusOptions(widget.nameList['type'], selectedGender);
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Добавить имя'),
-          content: SingleChildScrollView(
-            // Обработка прокрутки
-            child: Container(
-              width: double.maxFinite, // Задаем максимальную ширину диалога
-              child: Form(
-                key: _formKey, // Подключаем ключ формы
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Позволяем колонке занимать минимальную высоту
-                  children: [
-                    TextFormField(
-                      controller: nameController,
-                      decoration: InputDecoration(
-                        hintText: 'Введите имя',
-                        errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
-                        errorMaxLines: 5, // Разрешаем перенос текста ошибки на 5 строк
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Имя не может быть пустым';
-                        }
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Добавить имя'),
+              content: SingleChildScrollView(
+              // Обработка прокрутки
+                child: Container(
+                  width: double.maxFinite, // Задаем максимальную ширину диалога
+                  child: Form(
+                    key: _formKey, // Подключаем ключ формы
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Позволяем колонке занимать минимальную высоту
+                      children: [
+                        TextFormField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            hintText: 'Введите имя',
+                            errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
+                            errorMaxLines: 5, // Разрешаем перенос текста ошибки на 5 строк
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Имя не может быть пустым';
+                            }
 
-                        // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
-                        final regex = RegExp(r'^[А-Яа-яЁё]+$');
-                        if (!regex.hasMatch(value.trim())) {
-                          return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
-                        }
+                            // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
+                            final regex = RegExp(r'^[А-Яа-яЁё]+$');
+                            if (!regex.hasMatch(value.trim())) {
+                              return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
+                            }
 
-                        return null; // Валидация пройдена
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    DropdownButtonFormField<int>(
-                      value: selectedGender,
-                      //todo
-                      decoration: InputDecoration(labelText: 'Пол'),
-                      items: [
-                        DropdownMenuItem(value: 1, child: Text('Мужской')),
-                        DropdownMenuItem(value: 0, child: Text('Женский')),
+                            return null; // Валидация пройдена
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: selectedGender,
+                          decoration: InputDecoration(labelText: 'Пол'),
+                          items: [
+                            DropdownMenuItem(value: 1, child: Text('Мужской')),
+                            DropdownMenuItem(value: 0, child: Text('Женский')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedGender = value!;
+                              _updateStatusOptions(widget.nameList['type'], selectedGender);
+                            });
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedStatus,
+                          decoration: InputDecoration(labelText: 'Статус'),
+                          items: _currentStatusOptions.map((status) {
+                            return DropdownMenuItem(
+                              value: status,
+                              child: Text(status),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedStatus = value;
+                            });
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedRank,
+                          decoration: InputDecoration(labelText: 'Сан'),
+                          items: _currentRankOptions.map((rank) {
+                            return DropdownMenuItem(
+                              value: rank,
+                              child: Text(rank),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedRank = value;
+                            });
+                          },
+                        ),
                       ],
-                      onChanged: (value) {
-                        selectedGender = value!;
-                      },
                     ),
-                    SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: selectedStatus,
-                      decoration: InputDecoration(labelText: 'Статус'),
-                      items: statusOptions.map((status) {
-                        return DropdownMenuItem(
-                          value: status,
-                          child: Text(status),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        selectedStatus = value;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: selectedRank,
-                      decoration: InputDecoration(labelText: 'Сан'),
-                      items: rankOptions.map((rank) {
-                        return DropdownMenuItem(
-                          value: rank,
-                          child: Text(rank),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        selectedRank = value;
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                // Проверяем валидацию
-                if (_formKey.currentState!.validate()) {
-                  if (nameController.text.isNotEmpty) {
-                    // Форматируем имя: первая буква заглавная, остальные маленькие
-                    String formattedName = nameController.text.trim();
-                    formattedName = formattedName[0].toUpperCase() +
-                        formattedName.substring(1).toLowerCase();
-                    _addName(formattedName, selectedGender, selectedStatus, selectedRank);
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-              child: Text('Добавить'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    // Проверяем валидацию
+                    if (_formKey.currentState!.validate()) {
+                      if (nameController.text.isNotEmpty) {
+                        // Форматируем имя: первая буква заглавная, остальные маленькие
+                        String formattedName = nameController.text.trim();
+                        formattedName = formattedName[0].toUpperCase() +
+                            formattedName.substring(1).toLowerCase();
+                        _addName(formattedName, selectedGender, selectedStatus, selectedRank);
+                        Navigator.of(context).pop();
+                      }
+                    }
+                  },
+                  child: Text('Добавить'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -731,88 +749,118 @@ class _NameListPageState extends State<NameListPage> {
     int selectedGender = name['gender'] ?? 1; // По умолчанию мужской пол
     String? selectedStatus = name['status']?.toString();
     String? selectedRank = name['rank']?.toString();
-    //todo
-    // Списки для выбора статуса и сана
-    final List<String> statusOptions = ['болящий', 'воин', 'новопреставленный'];
-    final List<String> rankOptions = ['мирянин', 'монах', 'священник', 'епископ'];
+
+    // Инициализируем список статусов в зависимости от типа списка
+    _updateStatusOptions(widget.nameList['type'], selectedGender);
+
+    // Проверяем, существует ли текущий статус в новом списке
+    if (!_currentStatusOptions.contains(selectedStatus)) {
+      selectedStatus = null; // Сбрасываем статус, если он не существует в новом списке
+    }
+
+    // Проверяем, существует ли текущий сан в новом списке
+    if(!_currentRankOptions.contains(selectedRank)) {
+      selectedRank = null;
+    }
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Редактировать имя'),
-          content: SingleChildScrollView(
-            child: Container(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(hintText: 'Введите новое имя'),
-                  ),
-                  SizedBox(height: 16),
-                  DropdownButtonFormField<int>(
-                    value: selectedGender,
-                    //todo
-                    decoration: InputDecoration(labelText: 'Пол'),
-                    items: [
-                      DropdownMenuItem(value: 1, child: Text('Мужской')),
-                      DropdownMenuItem(value: 0, child: Text('Женский')),
-                    ],
-                    onChanged: (value) {
-                      selectedGender = value!;
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedStatus,
-                    decoration: InputDecoration(labelText: 'Статус'),
-                    items: statusOptions.map((status) {
-                      return DropdownMenuItem(
-                        value: status,
-                        child: Text(status),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      selectedStatus = value;
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedRank,
-                    decoration: InputDecoration(labelText: 'Сан'),
-                    items: rankOptions.map((rank) {
-                      return DropdownMenuItem(
-                        value: rank,
-                        child: Text(rank),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      selectedRank = value;
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  // Форматируем имя: первая буква заглавная, остальные маленькие
-                  String formattedName = nameController.text.trim();
-                  formattedName = formattedName[0].toUpperCase() +
-                      formattedName.substring(1).toLowerCase();
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Редактировать имя'),
+              content: SingleChildScrollView(
+                child: Container(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(hintText: 'Введите новое имя'),
+                      ),
+                      SizedBox(height: 16),
+                      DropdownButtonFormField<int>(
+                        value: selectedGender,
+                        decoration: InputDecoration(labelText: 'Пол'),
+                        items: [
+                          DropdownMenuItem(value: 1, child: Text('Мужской')),
+                          DropdownMenuItem(value: 0, child: Text('Женский')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedGender = value!;
+                            // Обновляем список статусов при изменении пола
+                            _updateStatusOptions(widget.nameList['type'], selectedGender);
 
-                  // Вызываем метод редактирования имени с новыми параметрами
-                  _editName(nameId, formattedName, selectedGender, selectedStatus, selectedRank);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text('Сохранить'),
-            ),
-          ],
+                            // Проверяем, существует ли текущий статус в новом списке
+                            if (!_currentStatusOptions.contains(selectedStatus)) {
+                              selectedStatus = null; // Сбрасываем статус, если он не существует в новом списке
+                            }
+
+                            // Проверяем, существует ли текущий сан в новом списке
+                            if(!_currentRankOptions.contains(selectedRank)) {
+                              selectedRank = null;
+                            }
+                          });
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedStatus,
+                        decoration: InputDecoration(labelText: 'Статус'),
+                        items: _currentStatusOptions.map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Text(status),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedStatus = value;
+                          });
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedRank,
+                        decoration: InputDecoration(labelText: 'Сан'),
+                        items: _currentRankOptions.map((rank) {
+                          return DropdownMenuItem(
+                            value: rank,
+                            child: Text(rank),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedRank = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    if (nameController.text.isNotEmpty) {
+                      // Форматируем имя: первая буква заглавная, остальные маленькие
+                      String formattedName = nameController.text.trim();
+                      formattedName = formattedName[0].toUpperCase() +
+                          formattedName.substring(1).toLowerCase();
+
+                      // Вызываем метод редактирования имени с новыми параметрами
+                      _editName(nameId, formattedName, selectedGender, selectedStatus, selectedRank);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Text('Сохранить'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -973,3 +1021,81 @@ class SettingsPage extends StatelessWidget {
     );
   }
 }
+
+// Списки статусов для "о здравии"
+final List<String> _healthStatusMale = [
+  'Болящего',
+  'Тяжело болящего',
+  'Путешествующего',
+  'Заключенного',
+  'Заблудшего',
+];
+final List<String> _healthStatusFemale = [
+  'Болящей',
+  'Тяжело болящей',
+  'Путешествующей',
+  'Заключенной',
+  'Заблудшей',
+  'Непраздной',
+];
+
+// Списки статусов для "об упокоении"
+final List<String> _reposeStatusMale = [
+  'Убиенного',
+  'Новопреставленного',
+  'Приснопоминаемого',
+];
+final List<String> _reposeStatusFemale = [
+  'Убиенной',
+  'Новопреставленной',
+  'Приснопоминаемой',
+];
+
+// Список сана для мужского пола
+final List<String> _rankOptionsMale = [
+  'Патриарха',
+  'Схимитрополита',
+  'Митрополита',
+  'Схиархиепископа',
+  'Архиепископа',
+  'Схиепископа',
+  'Епископа',
+  'Схиархимандрита',
+  'Архимандрита',
+  'Протопресвитера',
+  'Схиигумена',
+  'Игумена',
+  'Протоиерея',
+  'Иеросхимонаха',
+  'Иеромонаха',
+  'Иерея',
+  'Схиархидиакона',
+  'Архидиакона',
+  'Портодиакона',
+  'Схииеродиакона',
+  'Иеродиакона',
+  'Диакона',
+  'Схимонаха',
+  'Монаха',
+  'Инока',
+  'Иподиакона',
+  'Послушника',
+  'Чтеца',
+  'Отрока',
+  'Младенца',
+  'Воина',
+];
+
+// Список сана для женского пола
+final List<String> _rankOptionsFemale = [
+  'Схиигуменьи',
+  'Игуменьи',
+  'Схимонахини',
+  'Монахини',
+  'Инокини',
+  'Матушки',
+  'Послушницы',
+  'Отроковицы',
+  'Младенца',
+  'Воина',
+];
