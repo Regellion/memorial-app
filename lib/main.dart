@@ -695,8 +695,8 @@ class _NameListPageState extends State<NameListPage> {
                           decoration: InputDecoration(labelText: 'Статус'),
                           items: _currentStatusOptions.map((status) {
                             return DropdownMenuItem(
-                              value: status,
-                              child: Text(status),
+                              value: status.isEmpty ? null : status,
+                              child: Text(status.isEmpty ? 'Не выбрано' : status),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -708,11 +708,11 @@ class _NameListPageState extends State<NameListPage> {
                         SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: selectedRank,
-                          decoration: InputDecoration(labelText: 'Сан'),
+                          decoration: InputDecoration(labelText: 'Сан'), //todo как назвать?
                           items: _currentRankOptions.map((rank) {
                             return DropdownMenuItem(
-                              value: rank,
-                              child: Text(rank),
+                              value: rank.isEmpty ? null : rank,
+                              child: Text(rank.isEmpty ? 'Не выбрано' : rank),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -736,8 +736,11 @@ class _NameListPageState extends State<NameListPage> {
                         String formattedName = nameController.text.trim();
                         formattedName = formattedName[0].toUpperCase() +
                             formattedName.substring(1).toLowerCase();
-                        _addName(formattedName, selectedGender, selectedStatus, selectedRank);
-                        Navigator.of(context).pop();
+                        _addName(
+                            formattedName,
+                            selectedGender,
+                            selectedStatus?.isEmpty ?? true ? null : selectedStatus,
+                            selectedRank?.isEmpty ?? true ? null : selectedRank);                        Navigator.of(context).pop();
                       }
                     }
                   },
@@ -822,8 +825,8 @@ class _NameListPageState extends State<NameListPage> {
                         decoration: InputDecoration(labelText: 'Статус'),
                         items: _currentStatusOptions.map((status) {
                           return DropdownMenuItem(
-                            value: status,
-                            child: Text(status),
+                            value: status.isEmpty ? null : status,
+                            child: Text(status.isEmpty ? 'Не выбрано' : status),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -835,11 +838,11 @@ class _NameListPageState extends State<NameListPage> {
                       SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         value: selectedRank,
-                        decoration: InputDecoration(labelText: 'Сан'),
+                        decoration: InputDecoration(labelText: 'Сан'), //todo как назвать?
                         items: _currentRankOptions.map((rank) {
                           return DropdownMenuItem(
-                            value: rank,
-                            child: Text(rank),
+                            value: rank.isEmpty ? null : rank,
+                            child: Text(rank.isEmpty ? 'Не выбрано' : rank),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -862,8 +865,12 @@ class _NameListPageState extends State<NameListPage> {
                           formattedName.substring(1).toLowerCase();
 
                       // Вызываем метод редактирования имени с новыми параметрами
-                      _editName(nameId, formattedName, selectedGender, selectedStatus, selectedRank);
-                      Navigator.of(context).pop();
+                      _editName(
+                          nameId,
+                          formattedName,
+                          selectedGender,
+                          selectedStatus?.isEmpty ?? true ? null : selectedStatus,
+                          selectedRank?.isEmpty ?? true ? null : selectedRank);                      Navigator.of(context).pop();
                     }
                   },
                   child: Text('Сохранить'),
@@ -1032,8 +1039,10 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
+//todo переделать на энамы. брать из бд. два значения(короткое и полное), настройкой отруливать, добавить пустое значение
 // Списки статусов для "о здравии"
 final List<String> _healthStatusMale = [
+  '',
   'Болящего',
   'Тяжело болящего',
   'Путешествующего',
@@ -1041,6 +1050,7 @@ final List<String> _healthStatusMale = [
   'Заблудшего',
 ];
 final List<String> _healthStatusFemale = [
+  '',
   'Болящей',
   'Тяжело болящей',
   'Путешествующей',
@@ -1051,11 +1061,13 @@ final List<String> _healthStatusFemale = [
 
 // Списки статусов для "об упокоении"
 final List<String> _reposeStatusMale = [
+  '',
   'Убиенного',
   'Новопреставленного',
   'Приснопоминаемого',
 ];
 final List<String> _reposeStatusFemale = [
+  '',
   'Убиенной',
   'Новопреставленной',
   'Приснопоминаемой',
@@ -1063,6 +1075,7 @@ final List<String> _reposeStatusFemale = [
 
 // Список сана для мужского пола
 final List<String> _rankOptionsMale = [
+  '',
   'Патриарха',
   'Схимитрополита',
   'Митрополита',
@@ -1098,6 +1111,7 @@ final List<String> _rankOptionsMale = [
 
 // Список сана для женского пола
 final List<String> _rankOptionsFemale = [
+  '',
   'Схиигуменьи',
   'Игуменьи',
   'Схимонахини',
