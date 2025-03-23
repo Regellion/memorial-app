@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'settings.dart';
 import 'database_helper.dart';
 
 void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => Settings()),
-      ],
-      child: NameListApp(),
-    ),
-  );
+  WidgetsFlutterBinding.ensureInitialized();
+  // Задаем фиксированную вертикальную ориентацию
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp, // Только вертикальная ориентация
+  ]).then((_) {
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => Settings()),
+        ],
+        child: NameListApp(),
+      ),
+    );
+  });
 }
 
 class NameListApp extends StatelessWidget {
