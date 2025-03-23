@@ -512,7 +512,10 @@ class _NameListPageState extends State<NameListPage> {
                                       title: Text(
                                         [
                                           if (status.isNotEmpty) status,
-                                          if (rank.isNotEmpty) rank,
+                                          if (rank.isNotEmpty)
+                                            status.isNotEmpty
+                                                ? rank[0].toLowerCase() + rank.substring(1) // Если статус есть, начинаем с маленькой буквы
+                                                : rank, // Если статуса нет, оставляем как есть
                                           name['name'],
                                         ].join(' '),
                                         style: TextStyle(
