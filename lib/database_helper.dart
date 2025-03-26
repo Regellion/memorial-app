@@ -63,19 +63,15 @@ class DatabaseHelper {
     await db.execute(
       '''
         CREATE TABLE IF NOT EXISTS settings(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          fontSize REAL,
-          themeMode INTEGER
+          name TEXT PRIMARY KEY,
+          description TEXT,
+          value TEXT
         );
       '''
     );
 
-    await db.execute(
-      '''
-        INSERT OR IGNORE INTO settings (id, fontSize, themeMode) 
-        VALUES (1, 20.0, 0);
-      '''
-    );
+    // Добавляем настройки по умолчанию, если их нет
+    await _insertDefaultSettings(db);
 
     // Создаем таблицу name_lists, если она не существует
     await db.execute(
@@ -95,8 +91,8 @@ class DatabaseHelper {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name_list_id INTEGER NOT NULL,
           name TEXT NOT NULL,
-          status TEXT,
-          rank TEXT,
+          status_id INTEGER,
+          rank_id INTEGER,
           gender INTEGER NOT NULL DEFAULT 1,
           FOREIGN KEY (name_list_id) REFERENCES name_lists(id) ON DELETE CASCADE
         );
@@ -119,23 +115,52 @@ class DatabaseHelper {
       '''
     );
   }
+  Future<void> _insertDefaultSettings(Database db) async {
+    // Проверяем, есть ли уже настройки, и добавляем только если их нет
+    final existingSettings = await db.query('settings');
+    if (existingSettings.isEmpty) {
+      await db.insert('settings', {
+        'name': 'font_size',
+        'description': 'Размер шрифта имен',
+        'value': '20.0',
+      });
 
-  //todo рефакторинг
-  // Загрузка настроек
-  Future<Map<String, dynamic>> loadSettings() async {
-    final db = await database;
-    final settings = await db.query('settings', limit: 1);
-    return settings.isNotEmpty ? settings.first : {};
+      await db.insert('settings', {
+        'name': 'theme_mode',
+        'description': 'Тема приложения',
+        'value': '0',
+      });
+
+      await db.insert('settings', {
+        'name': 'use_short_names',
+        'description': 'Использовать сокращенные префиксы имен',
+        'value': '1',
+      });
+    }
   }
 
-  // Сохранение настроек
-  Future<void> saveSettings(double fontSize, int themeMode) async {
+// Получение значения настройки
+  Future<String?> getSetting(String name) async {
     final db = await database;
-    await db.update(
+    final result = await db.query(
       'settings',
-      {'fontSize': fontSize, 'themeMode': themeMode},
-      where: 'id = ?',
-      whereArgs: [1],
+      where: 'name = ?',
+      whereArgs: [name],
+      limit: 1,
+    );
+    return result.isNotEmpty ? result.first['value'] as String? : null;
+  }
+
+  // Установка значения настройки
+  Future<void> setSetting(String name, String value) async {
+    final db = await database;
+    await db.insert(
+      'settings',
+      {
+        'name': name,
+        'value': value,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
@@ -162,14 +187,14 @@ class DatabaseHelper {
   }
 
   // Добавление имени
-  Future<int> addName(int nameListId, String name, int gender, String? status, String? rank) async {
+  Future<int> addName(int nameListId, String name, int gender, int? statusId, int? rankId) async {
     final db = await database;
     return await db.insert('names', {
       'name_list_id': nameListId,
       'name': name,
       'gender': gender,
-      'status': status,
-      'rank': rank,
+      'status_id': statusId,
+      'rank_id': rankId,
     });
   }
 
@@ -185,15 +210,15 @@ class DatabaseHelper {
     await db.delete('names', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> updateName(int nameId, String newName, int gender, String? status, String? rank) async {
+  Future<void> updateName(int nameId, String newName, int gender, int? statusId, int? rankId) async {
     final db = await database;
     await db.update(
       'names',
       {
         'name': newName,
         'gender': gender,
-        'status': status,
-        'rank': rank,
+        'status_id': statusId,
+        'rank_id': rankId,
       },
       where: 'id = ?',
       whereArgs: [nameId],

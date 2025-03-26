@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import 'settings.dart';
 import 'database_helper.dart';
 
-void main() {
+void main() async {
+  await AppData.initialize();
   WidgetsFlutterBinding.ensureInitialized();
   // Задаем фиксированную вертикальную ориентацию
   SystemChrome.setPreferredOrientations([
@@ -87,12 +88,12 @@ class _NameListHomeState extends State<NameListHome> {
     });
   }
 
-  Future<void> _addNameToList(int nameListId, String name, int gender, String? status, String? rank) async {
-    await _dbHelper.addName(nameListId, name, gender, status, rank);
+  Future<void> _addNameToList(int nameListId, String name, int gender, int status_id, int rank_id) async {
+    await _dbHelper.addName(nameListId, name, gender, status_id, rank_id);
   }
 
-  Future<void> _editNameInList(int nameId, String newName, int gender, String? status, String? rank) async {
-    await _dbHelper.updateName(nameId, newName, gender, status, rank);
+  Future<void> _editNameInList(int nameId, String newName, int gender, int status_id, int rank_id) async {
+    await _dbHelper.updateName(nameId, newName, gender, status_id, rank_id);
   }
 
   Future<void> _deleteNameFromList(int nameId) async {
@@ -235,8 +236,8 @@ class _NameListHomeState extends State<NameListHome> {
           return NameListPage(
             key: ValueKey(nameList['id']), // Передаем key сюда
             nameList: nameList,
-            onAddName: (name, gender, status, rank) => _addNameToList(nameList['id'], name, gender, status, rank),
-            onEditName: (nameId, newName, gender, status, rank) => _editNameInList(nameId, newName, gender, status, rank),
+            onAddName: (name, gender, statusId, rankId) => _addNameToList(nameList['id'], name, gender, statusId, rankId),
+            onEditName: (nameId, newName, gender, statusId, rankId) => _editNameInList(nameId, newName, gender, statusId, rankId),
             onDeleteName: (nameId) => _deleteNameFromList(nameId),
             onEditTitle: (newTitle) => _editListTitle(nameList['id'], newTitle),
             onDeleteList: () => _deleteList(nameList['id']),
@@ -311,8 +312,8 @@ class _NameListHomeState extends State<NameListHome> {
 
 class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;
-  final Function(String, int, String?, String?) onAddName;
-  final Function(int, String, int, String?, String?) onEditName;
+  final Function(String, int, int, int) onAddName;
+  final Function(int, String, int, int, int) onEditName;
   final Function(int) onDeleteName;
   final Function(String) onEditTitle;
   final VoidCallback onDeleteList;
@@ -354,18 +355,18 @@ class _NameListPageState extends State<NameListPage> {
     });
   }
 
-  Future<void> _addName(String name, int gender, String? status, String? rank) async {
-    await widget.onAddName(name, gender, status, rank);
+  Future<void> _addName(String name, int gender, int status_id, int rank_id) async {
+    await widget.onAddName(name, gender, status_id, rank_id);
     await _loadNames();
   }
 
-  Future<void> _editName(int nameId, String newName, int gender, String? status, String? rank) async {
+  Future<void> _editName(int nameId, String newName, int gender, int statusId, int rankId) async {
     // Получаем текущее имя
     final name = _names.firstWhere((name) => name['id'] == nameId);
     final currentName = name['name'];
     final currentGender = name['gender'];
-    final currentStatus = name['status'];
-    final currentRank = name['rank'];
+    final currentStatus = name['status_id'];
+    final currentRank = name['rank_id'];
 
     // Форматируем новое имя: первая буква заглавная, остальные маленькие
     String formattedName = newName.trim();
@@ -374,16 +375,17 @@ class _NameListPageState extends State<NameListPage> {
     // Преобразуем оба имени в нижний регистр и сравниваем
     if (formattedName.toLowerCase() != currentName.toLowerCase()||
         gender != currentGender ||
-        status != currentStatus ||
-        rank != currentRank) {
+        statusId != currentStatus ||
+        rankId != currentRank) {
       // Если данные изменились, вызываем метод редактирования
-      await widget.onEditName(nameId, formattedName, gender, status, rank);
+      await widget.onEditName(nameId, formattedName, gender, statusId, rankId);
       await _loadNames(); // Перезагружаем имена
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<Settings>(context);
     String frameImage = widget.nameList['type'] == 0
         ? 'assets/images/health_frame_title.png'
         : 'assets/images/repose_frame_title.png';
@@ -468,9 +470,17 @@ class _NameListPageState extends State<NameListPage> {
                       itemCount: _names.length,
                       itemBuilder: (context, index) {
                         final name = _names[index];
-                        final status = name['status']?.toString() ?? ''; // Получаем статус, если он есть
-                        final rank = name['rank']?.toString() ?? ''; // Получаем сан, если он есть
+                        final status = name['status_id']; // Получаем статус, если он есть
+                        final rank = name['rank_id']; // Получаем сан, если он есть
 
+                        // Получаем полный или сокращенный вариант в зависимости от настройки
+                        final statusText = settings.useShortNames
+                            ? findOptionById(status).short
+                            : findOptionById(status).full;
+
+                        final rankText = settings.useShortNames
+                            ? findOptionById(rank).short
+                            : findOptionById(rank).full;
                         return Dismissible(
                           key: ValueKey(name['id']), // Используем ValueKey
                           direction: DismissDirection.horizontal,
@@ -511,11 +521,11 @@ class _NameListPageState extends State<NameListPage> {
                                     ListTile(
                                       title: Text(
                                         [
-                                          if (status.isNotEmpty) status,
-                                          if (rank.isNotEmpty)
-                                            status.isNotEmpty
-                                                ? rank[0].toLowerCase() + rank.substring(1) // Если статус есть, начинаем с маленькой буквы
-                                                : rank, // Если статуса нет, оставляем как есть
+                                          if (statusText.isNotEmpty) statusText,
+                                          if (rankText.isNotEmpty)
+                                            statusText.isNotEmpty
+                                                ? rankText[0].toLowerCase() + rankText.substring(1) // Если статус есть, начинаем с маленькой буквы
+                                                : rankText, // Если статуса нет, оставляем как есть
                                           name['name'],
                                         ].join(' '),
                                         style: TextStyle(
@@ -617,13 +627,19 @@ class _NameListPageState extends State<NameListPage> {
 
   void _updateStatusOptions(int listType, int gender) {
     if (listType == 0) { // О здравии
-      _currentStatusOptions = gender == 1 ? _healthStatusMale : _healthStatusFemale;
+      _currentStatusOptions = gender == 1
+          ? _healthStatusMale.map((opt) => opt.full).toList()
+          : _healthStatusFemale.map((opt) => opt.full).toList();
     } else { // Об упокоении
-      _currentStatusOptions = gender == 1 ? _reposeStatusMale : _reposeStatusFemale;
+      _currentStatusOptions = gender == 1
+          ? _reposeStatusMale.map((opt) => opt.full).toList()
+          : _reposeStatusFemale.map((opt) => opt.full).toList();
     }
 
     // Обновляем список сана
-    _currentRankOptions = gender == 1 ? _rankOptionsMale : _rankOptionsFemale;
+    _currentRankOptions = gender == 1
+        ? _rankOptionsMale.map((opt) => opt.full).toList()
+        : _rankOptionsFemale.map((opt) => opt.full).toList();
   }
 
   void _showAddNameDialog(BuildContext context) {
@@ -686,6 +702,9 @@ class _NameListPageState extends State<NameListPage> {
                             setState(() {
                               selectedGender = value!;
                               _updateStatusOptions(widget.nameList['type'], selectedGender);
+                              // Сбрасываем выбранные статус и ранг при изменении пола
+                              selectedStatus = null;
+                              selectedRank = null;
                             });
                           },
                         ),
@@ -739,8 +758,10 @@ class _NameListPageState extends State<NameListPage> {
                         _addName(
                             formattedName,
                             selectedGender,
-                            selectedStatus?.isEmpty ?? true ? null : selectedStatus,
-                            selectedRank?.isEmpty ?? true ? null : selectedRank);                        Navigator.of(context).pop();
+                            findOptionByName(selectedStatus).id,
+                            findOptionByName(selectedRank).id
+                        );
+                        Navigator.of(context).pop();
                       }
                     }
                   },
@@ -760,8 +781,8 @@ class _NameListPageState extends State<NameListPage> {
     // Получаем текущие данные имени
     final name = _names.firstWhere((name) => name['id'] == nameId);
     int selectedGender = name['gender'] ?? 1; // По умолчанию мужской пол
-    String? selectedStatus = name['status']?.toString();
-    String? selectedRank = name['rank']?.toString();
+    String? selectedStatus = findOptionById(name['status_id']).full;
+    String? selectedRank = findOptionById(name['rank_id']).full;
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
@@ -821,14 +842,22 @@ class _NameListPageState extends State<NameListPage> {
                       ),
                       SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: selectedStatus,
+                        value: selectedStatus?.isEmpty ?? true ? null : selectedStatus,
                         decoration: InputDecoration(labelText: 'Статус'),
-                        items: _currentStatusOptions.map((status) {
-                          return DropdownMenuItem(
-                            value: status.isEmpty ? null : status,
-                            child: Text(status.isEmpty ? 'Не выбрано' : status),
-                          );
-                        }).toList(),
+                        items: [
+                          // Явно добавляем вариант "Не выбрано" с value: null
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Не выбрано'),
+                          ),
+                          // Добавляем только непустые статусы
+                          ..._currentStatusOptions.where((s) => s.isNotEmpty).map((status) {
+                            return DropdownMenuItem<String>(
+                              value: status,
+                              child: Text(status),
+                            );
+                          }).toList(),
+                        ],
                         onChanged: (value) {
                           setState(() {
                             selectedStatus = value;
@@ -837,14 +866,22 @@ class _NameListPageState extends State<NameListPage> {
                       ),
                       SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: selectedRank,
+                        value: selectedRank?.isEmpty ?? true ? null : selectedRank,
                         decoration: InputDecoration(labelText: 'Сан'), //todo как назвать?
-                        items: _currentRankOptions.map((rank) {
-                          return DropdownMenuItem(
-                            value: rank.isEmpty ? null : rank,
-                            child: Text(rank.isEmpty ? 'Не выбрано' : rank),
-                          );
-                        }).toList(),
+                        items: [
+                          // Явно добавляем вариант "Не выбрано" с value: null
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Не выбрано'),
+                          ),
+                          // Добавляем только непустые статусы
+                          ..._currentRankOptions.where((s) => s.isNotEmpty).map((rank) {
+                            return DropdownMenuItem<String>(
+                              value: rank,
+                              child: Text(rank),
+                            );
+                          }).toList(),
+                        ],
                         onChanged: (value) {
                           setState(() {
                             selectedRank = value;
@@ -869,8 +906,10 @@ class _NameListPageState extends State<NameListPage> {
                           nameId,
                           formattedName,
                           selectedGender,
-                          selectedStatus?.isEmpty ?? true ? null : selectedStatus,
-                          selectedRank?.isEmpty ?? true ? null : selectedRank);                      Navigator.of(context).pop();
+                          findOptionByName(selectedStatus).id,
+                          findOptionByName(selectedRank).id
+                      );
+                      Navigator.of(context).pop();
                     }
                   },
                   child: Text('Сохранить'),
@@ -1033,93 +1072,150 @@ class SettingsPage extends StatelessWidget {
               ],
             ),
           ),
+          ListTile(
+            title: Text('Использовать сокращенные имена'),
+            trailing: Switch(
+              value: settings.useShortNames,
+              onChanged: (value) {
+                settings.setUseShortNames(value);
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-//todo переделать на энамы. брать из бд. два значения(короткое и полное), настройкой отруливать, добавить пустое значение
+//todo настройкой отруливать
 // Списки статусов для "о здравии"
-final List<String> _healthStatusMale = [
-  '',
-  'Болящего',
-  'Тяжело болящего',
-  'Путешествующего',
-  'Заключенного',
-  'Заблудшего',
+final List<NameOption> _healthStatusMale = [
+  NameOption.empty(),
+  NameOption(full: 'Болящего', short: 'Бол.', id: 1),
+  NameOption(full: 'Тяжело болящего', short: 'Т. бол.', id: 2),
+  NameOption(full: 'Путешествующего', short: 'Пут.', id: 3),
+  NameOption(full: 'Заключенного', short: 'Закл.', id: 4),
+  NameOption(full: 'Заблудшего', short: 'Забл.', id: 5),
 ];
-final List<String> _healthStatusFemale = [
-  '',
-  'Болящей',
-  'Тяжело болящей',
-  'Путешествующей',
-  'Заключенной',
-  'Заблудшей',
-  'Непраздной',
+
+final List<NameOption> _healthStatusFemale = [
+  NameOption.empty(),
+  NameOption(full: 'Болящей', short: 'Бол.', id: 6),
+  NameOption(full: 'Тяжело болящей', short: 'Т. бол.', id: 7),
+  NameOption(full: 'Путешествующей', short: 'Пут.', id: 8),
+  NameOption(full: 'Заключенной', short: 'Закл.', id: 9),
+  NameOption(full: 'Заблудшей', short: 'Забл.', id: 10),
+  NameOption(full: 'Непраздной', short: 'Непразд.', id: 11),
 ];
 
 // Списки статусов для "об упокоении"
-final List<String> _reposeStatusMale = [
-  '',
-  'Убиенного',
-  'Новопреставленного',
-  'Приснопоминаемого',
+final List<NameOption> _reposeStatusMale = [
+  NameOption.empty(),
+  NameOption(full: 'Убиенного', short: 'Уб.', id: 12),
+  NameOption(full: 'Новопреставленного', short: 'Н.п.', id: 13),
+  NameOption(full: 'Приснопоминаемого', short: 'П.п.', id: 14),
 ];
-final List<String> _reposeStatusFemale = [
-  '',
-  'Убиенной',
-  'Новопреставленной',
-  'Приснопоминаемой',
+
+final List<NameOption> _reposeStatusFemale = [
+  NameOption.empty(),
+  NameOption(full: 'Убиенной', short: 'Уб.', id: 15),
+  NameOption(full: 'Новопреставленной', short: 'Н.п.', id: 16),
+  NameOption(full: 'Приснопоминаемой', short: 'П.п..', id: 17),
 ];
 
 // Список сана для мужского пола
-final List<String> _rankOptionsMale = [
-  '',
-  'Патриарха',
-  'Схимитрополита',
-  'Митрополита',
-  'Схиархиепископа',
-  'Архиепископа',
-  'Схиепископа',
-  'Епископа',
-  'Схиархимандрита',
-  'Архимандрита',
-  'Протопресвитера',
-  'Схиигумена',
-  'Игумена',
-  'Протоиерея',
-  'Иеросхимонаха',
-  'Иеромонаха',
-  'Иерея',
-  'Схиархидиакона',
-  'Архидиакона',
-  'Портодиакона',
-  'Схииеродиакона',
-  'Иеродиакона',
-  'Диакона',
-  'Схимонаха',
-  'Монаха',
-  'Инока',
-  'Иподиакона',
-  'Послушника',
-  'Чтеца',
-  'Отрока',
-  'Младенца',
-  'Воина',
+final List<NameOption> _rankOptionsMale = [
+  NameOption.empty(),
+  NameOption(full: 'Патриарха', short: 'Патр.', id: 18),
+  NameOption(full: 'Схимитрополита', short: 'Схимитр.', id: 19),
+  NameOption(full: 'Митрополита', short: 'Митр.', id: 20),
+  NameOption(full: 'Схиархиепископа', short: 'Схиархиеп.', id: 21),
+  NameOption(full: 'Архиепископа', short: 'Архиеп.', id: 22),
+  NameOption(full: 'Схиепископа', short: 'Схиеп.', id: 23),
+  NameOption(full: 'Епископа', short: 'Еп.', id: 24),
+  NameOption(full: 'Схиархимандрита', short: 'Схиархим.', id: 25),
+  NameOption(full: 'Архимандрита', short: 'Архим.', id: 26),
+  NameOption(full: 'Протопресвитера', short: 'Протопр.', id: 27),
+  NameOption(full: 'Схиигумена', short: 'Схиигум.', id: 28),
+  NameOption(full: 'Игумена', short: 'Игум.', id: 29),
+  NameOption(full: 'Протоиерея', short: 'Прот.', id: 30),
+  NameOption(full: 'Иеросхимонаха', short: 'Иеросхим.', id: 31),
+  NameOption(full: 'Иеромонаха', short: 'Иером.', id: 32),
+  NameOption(full: 'Иерея', short: 'Иер.', id: 33),
+  NameOption(full: 'Схиархидиакона', short: 'Схиархидиак.', id: 34),
+  NameOption(full: 'Архидиакона', short: 'Архидиак.', id: 35),
+  NameOption(full: 'Протодиакона', short: 'Протодиак.', id: 36),
+  NameOption(full: 'Схииеродиакона', short: 'Схииеродиак.', id: 37),
+  NameOption(full: 'Иеродиакона', short: 'Иеродиак.', id: 38),
+  NameOption(full: 'Диакона', short: 'Диак.', id: 39),
+  NameOption(full: 'Схимонаха', short: 'Схимон.', id: 40),
+  NameOption(full: 'Монаха', short: 'Мон.', id: 41),
+  NameOption(full: 'Инока', short: 'Инок.', id: 42),
+  NameOption(full: 'Иподиакона', short: 'Ипод.', id: 43),
+  NameOption(full: 'Послушника', short: 'Посл.', id: 44),
+  NameOption(full: 'Чтеца', short: 'Чтец.', id: 45),
+  NameOption(full: 'Отрока', short: 'Отр.', id: 46),
+  NameOption(full: 'Юноши', short: 'Юн.', id: 47),
+  NameOption(full: 'Младенца', short: 'Мл.', id: 48),
+  NameOption(full: 'Воина', short: 'В.', id: 49),
 ];
 
 // Список сана для женского пола
-final List<String> _rankOptionsFemale = [
-  '',
-  'Схиигуменьи',
-  'Игуменьи',
-  'Схимонахини',
-  'Монахини',
-  'Инокини',
-  'Матушки',
-  'Послушницы',
-  'Отроковицы',
-  'Младенца',
-  'Воина',
+final List<NameOption> _rankOptionsFemale = [
+  NameOption.empty(),
+  NameOption(full: 'Схиигуменьи', short: 'Схиигум.', id: 50),
+  NameOption(full: 'Игуменьи', short: 'Игум.', id: 51),
+  NameOption(full: 'Схимонахини', short: 'Схимон.', id: 52),
+  NameOption(full: 'Монахини', short: 'Мон.', id: 53),
+  NameOption(full: 'Инокини', short: 'Инок.', id: 54),
+  NameOption(full: 'Матушки', short: 'Мат.', id: 55),
+  NameOption(full: 'Послушницы', short: 'Посл.', id: 56),
+  NameOption(full: 'Девицы', short: 'Дев', id: 57),
+  NameOption(full: 'Отроковицы', short: 'Отр.', id: 58),
+  NameOption(full: 'Младенца', short: 'Мл.', id: 59),
+  NameOption(full: 'Воина', short: 'В.', id: 60),
 ];
+
+
+NameOption findOptionById(int? id) {
+  if (id == null) {
+    return NameOption.empty();
+  }
+  return AppData.allOptionsList.firstWhere((opt) => opt.id == id,
+      orElse: () => NameOption.empty());
+}
+
+NameOption findOptionByName(String? name) {
+  if (name == null || name.isEmpty) {
+    return NameOption.empty();
+  }
+  return AppData.allOptionsList.firstWhere((opt) => opt.full == name,
+      orElse: () => NameOption.empty());
+}
+
+class NameOption {
+  final String full;  // Полный вариант
+  final String short; // Сокращенный вариант
+  final int id;
+
+  NameOption({required this.full, required this.short, required this.id});
+
+
+  // Пустое значение
+  static NameOption empty() => NameOption(full: '', short: '', id: 0);
+}
+
+class AppData {
+  static late final List<NameOption> allOptionsList;
+
+  static Future<void> initialize() async {
+    allOptionsList = [
+      ..._healthStatusMale,
+      ..._healthStatusFemale,
+      ..._reposeStatusMale,
+      ..._reposeStatusFemale,
+      ..._rankOptionsMale,
+      ..._rankOptionsFemale
+    ];
+  }
+}
