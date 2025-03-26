@@ -94,6 +94,7 @@ class DatabaseHelper {
           status_id INTEGER,
           rank_id INTEGER,
           gender INTEGER NOT NULL DEFAULT 1,
+          end_date TEXT,
           FOREIGN KEY (name_list_id) REFERENCES name_lists(id) ON DELETE CASCADE
         );
       '''
@@ -115,6 +116,48 @@ class DatabaseHelper {
       '''
     );
   }
+  // Добавьте эти методы в класс DatabaseHelper
+  Future<void> checkAndRemoveExpiredNames() async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String().split('T')[0]; // Текущая дата в формате YYYY-MM-DD
+
+    // Находим имена с истекшей датой поминовения
+    final expiredNames = await db.query(
+      'names',
+      where: 'end_date IS NOT NULL AND end_date <= ?',
+      whereArgs: [now],
+    );
+
+    // Удаляем каждое просроченное имя
+    for (final name in expiredNames) {
+      final nameId = name['id'] as int;
+      final nameListId = name['name_list_id'] as int;
+
+      await db.delete('names', where: 'id = ?', whereArgs: [nameId]);
+
+      // Проверяем, остались ли имена в списке
+      final remainingNames = await db.query(
+        'names',
+        where: 'name_list_id = ?',
+        whereArgs: [nameListId],
+      );
+
+      if (remainingNames.isEmpty) {
+        await db.delete('name_lists', where: 'id = ?', whereArgs: [nameListId]);
+      }
+    }
+  }
+
+  Future<void> updateNameEndDate(int nameId, String? endDate) async {
+    final db = await database;
+    await db.update(
+      'names',
+      {'end_date': endDate},
+      where: 'id = ?',
+      whereArgs: [nameId],
+    );
+  }
+
   Future<void> _insertDefaultSettings(Database db) async {
     // Проверяем, есть ли уже настройки, и добавляем только если их нет
     final existingSettings = await db.query('settings');
@@ -187,7 +230,7 @@ class DatabaseHelper {
   }
 
   // Добавление имени
-  Future<int> addName(int nameListId, String name, int gender, int? statusId, int? rankId) async {
+  Future<int> addName(int nameListId, String name, int gender, int? statusId, int? rankId, String? endDate) async {
     final db = await database;
     return await db.insert('names', {
       'name_list_id': nameListId,
@@ -195,6 +238,7 @@ class DatabaseHelper {
       'gender': gender,
       'status_id': statusId,
       'rank_id': rankId,
+      'end_date': endDate,
     });
   }
 
@@ -210,7 +254,7 @@ class DatabaseHelper {
     await db.delete('names', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> updateName(int nameId, String newName, int gender, int? statusId, int? rankId) async {
+  Future<void> updateName(int nameId, String newName, int gender, int? statusId, int? rankId, String? endDate) async {
     final db = await database;
     await db.update(
       'names',
@@ -219,6 +263,7 @@ class DatabaseHelper {
         'gender': gender,
         'status_id': statusId,
         'rank_id': rankId,
+        'end_date': endDate,
       },
       where: 'id = ?',
       whereArgs: [nameId],

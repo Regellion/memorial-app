@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'settings.dart';
@@ -8,6 +9,11 @@ import 'database_helper.dart';
 void main() async {
   await AppData.initialize();
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Проверяем и удаляем просроченные имена
+  final dbHelper = DatabaseHelper();
+  await dbHelper.checkAndRemoveExpiredNames();
+
   // Задаем фиксированную вертикальную ориентацию
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp, // Только вертикальная ориентация
@@ -88,12 +94,12 @@ class _NameListHomeState extends State<NameListHome> {
     });
   }
 
-  Future<void> _addNameToList(int nameListId, String name, int gender, int status_id, int rank_id) async {
-    await _dbHelper.addName(nameListId, name, gender, status_id, rank_id);
+  Future<void> _addNameToList(int nameListId, String name, int gender, int statusId, int rankId, String? endDate) async {
+    await _dbHelper.addName(nameListId, name, gender, statusId, rankId, endDate);
   }
 
-  Future<void> _editNameInList(int nameId, String newName, int gender, int status_id, int rank_id) async {
-    await _dbHelper.updateName(nameId, newName, gender, status_id, rank_id);
+  Future<void> _editNameInList(int nameId, String newName, int gender, int status_id, int rank_id, String? endDate) async {
+    await _dbHelper.updateName(nameId, newName, gender, status_id, rank_id, endDate);
   }
 
   Future<void> _deleteNameFromList(int nameId) async {
@@ -236,8 +242,8 @@ class _NameListHomeState extends State<NameListHome> {
           return NameListPage(
             key: ValueKey(nameList['id']), // Передаем key сюда
             nameList: nameList,
-            onAddName: (name, gender, statusId, rankId) => _addNameToList(nameList['id'], name, gender, statusId, rankId),
-            onEditName: (nameId, newName, gender, statusId, rankId) => _editNameInList(nameId, newName, gender, statusId, rankId),
+            onAddName: (name, gender, statusId, rankId, endDate) => _addNameToList(nameList['id'], name, gender, statusId, rankId, endDate),
+            onEditName: (nameId, newName, gender, statusId, rankId, endDate) => _editNameInList(nameId, newName, gender, statusId, rankId, endDate),
             onDeleteName: (nameId) => _deleteNameFromList(nameId),
             onEditTitle: (newTitle) => _editListTitle(nameList['id'], newTitle),
             onDeleteList: () => _deleteList(nameList['id']),
@@ -312,8 +318,8 @@ class _NameListHomeState extends State<NameListHome> {
 
 class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;
-  final Function(String, int, int, int) onAddName;
-  final Function(int, String, int, int, int) onEditName;
+  final Function(String, int, int, int, String?) onAddName;
+  final Function(int, String, int, int, int, String?) onEditName;
   final Function(int) onDeleteName;
   final Function(String) onEditTitle;
   final VoidCallback onDeleteList;
@@ -355,18 +361,19 @@ class _NameListPageState extends State<NameListPage> {
     });
   }
 
-  Future<void> _addName(String name, int gender, int status_id, int rank_id) async {
-    await widget.onAddName(name, gender, status_id, rank_id);
+  Future<void> _addName(String name, int gender, int statusId, int rankId, String? endDate) async {
+    await widget.onAddName(name, gender, statusId, rankId, endDate);
     await _loadNames();
   }
 
-  Future<void> _editName(int nameId, String newName, int gender, int statusId, int rankId) async {
+  Future<void> _editName(int nameId, String newName, int gender, int statusId, int rankId, String? endDate) async {
     // Получаем текущее имя
     final name = _names.firstWhere((name) => name['id'] == nameId);
     final currentName = name['name'];
     final currentGender = name['gender'];
     final currentStatus = name['status_id'];
     final currentRank = name['rank_id'];
+    final currentEndDate = name['end_date'];
 
     // Форматируем новое имя: первая буква заглавная, остальные маленькие
     String formattedName = newName.trim();
@@ -376,9 +383,10 @@ class _NameListPageState extends State<NameListPage> {
     if (formattedName.toLowerCase() != currentName.toLowerCase()||
         gender != currentGender ||
         statusId != currentStatus ||
-        rankId != currentRank) {
+        rankId != currentRank ||
+        currentEndDate != endDate) {
       // Если данные изменились, вызываем метод редактирования
-      await widget.onEditName(nameId, formattedName, gender, statusId, rankId);
+      await widget.onEditName(nameId, formattedName, gender, statusId, rankId, endDate);
       await _loadNames(); // Перезагружаем имена
     }
   }
@@ -649,6 +657,7 @@ class _NameListPageState extends State<NameListPage> {
     int selectedGender = 1; // По умолчанию выбран мужской пол
     String? selectedStatus;
     String? selectedRank;
+    DateTime? selectedDate;
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
@@ -740,6 +749,46 @@ class _NameListPageState extends State<NameListPage> {
                             });
                           },
                         ),
+                        SizedBox(height: 16),
+                        ListTile(
+                          title: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              selectedDate == null
+                                  ? 'Поминать до:'
+                                  : 'Поминать до: ${DateFormat('dd.MM.yyyy').format(selectedDate!)}',
+                              style: TextStyle(
+                                fontSize: 16, // Начальный размер шрифта
+                              ),
+                              maxLines: 1, // Гарантируем одну строку
+                              overflow: TextOverflow.visible, // Позволяет изменять размер шрифта
+                            ),
+                          ),
+                          trailing: Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime(2100),
+                            );
+                            if (pickedDate != null) {
+                              setState(() {
+                                selectedDate = pickedDate;
+                              });
+                            }
+                          },
+                        ),
+                        if (selectedDate != null)
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                selectedDate = null;
+                              });
+                            },
+                            child: Text('Удалить дату'),
+                          ),
                       ],
                     ),
                   ),
@@ -759,7 +808,8 @@ class _NameListPageState extends State<NameListPage> {
                             formattedName,
                             selectedGender,
                             findOptionByName(selectedStatus).id,
-                            findOptionByName(selectedRank).id
+                            findOptionByName(selectedRank).id,
+                            selectedDate?.toIso8601String().split('T')[0], // Формат YYYY-MM-DD
                         );
                         Navigator.of(context).pop();
                       }
@@ -783,6 +833,7 @@ class _NameListPageState extends State<NameListPage> {
     int selectedGender = name['gender'] ?? 1; // По умолчанию мужской пол
     String? selectedStatus = findOptionById(name['status_id']).full;
     String? selectedRank = findOptionById(name['rank_id']).full;
+    DateTime? selectedDate = DateTime.parse(name['end_date']);
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
@@ -888,6 +939,46 @@ class _NameListPageState extends State<NameListPage> {
                           });
                         },
                       ),
+                      SizedBox(height: 16),
+                      ListTile(
+                        title: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            selectedDate == null
+                                ? 'Поминать до:'
+                                : 'Поминать до: ${DateFormat('dd.MM.yyyy').format(selectedDate!)}',
+                            style: TextStyle(
+                              fontSize: 16, // Начальный размер шрифта
+                            ),
+                            maxLines: 1, // Гарантируем одну строку
+                            overflow: TextOverflow.visible, // Позволяет изменять размер шрифта
+                          ),
+                        ),
+                        trailing: Icon(Icons.calendar_today),
+                        onTap: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
+                          );
+                          if (pickedDate != null) {
+                            setState(() {
+                              selectedDate = pickedDate;
+                            });
+                          }
+                        },
+                      ),
+                      if (selectedDate != null)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedDate = null;
+                            });
+                          },
+                          child: Text('Удалить дату'),
+                        ),
                     ],
                   ),
                 ),
@@ -907,7 +998,8 @@ class _NameListPageState extends State<NameListPage> {
                           formattedName,
                           selectedGender,
                           findOptionByName(selectedStatus).id,
-                          findOptionByName(selectedRank).id
+                          findOptionByName(selectedRank).id,
+                          selectedDate?.toIso8601String().split('T')[0], // Формат YYYY-MM-DD
                       );
                       Navigator.of(context).pop();
                     }
