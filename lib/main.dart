@@ -1087,7 +1087,6 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-//todo настройкой отруливать
 // Списки статусов для "о здравии"
 final List<NameOption> _healthStatusMale = [
   NameOption.empty(),
