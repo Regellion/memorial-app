@@ -480,6 +480,7 @@ class _NameListPageState extends State<NameListPage> {
                         final name = _names[index];
                         final status = name['status_id']; // Получаем статус, если он есть
                         final rank = name['rank_id']; // Получаем сан, если он есть
+                        final endDate = name['end_date'] as String?; // Получаем дату окончания
 
                         // Получаем полный или сокращенный вариант в зависимости от настройки
                         final statusText = settings.useShortNames
@@ -548,6 +549,18 @@ class _NameListPageState extends State<NameListPage> {
                                         _showEditDialog(context, name['id'], name['name']);
                                       },
                                     ),
+                                    if (endDate != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 8.0),
+                                        child: Text(
+                                          'Конец поминовения: ${DateFormat('dd.MM.yyyy').format(DateTime.parse(endDate))}',
+                                          style: TextStyle(
+                                            fontSize: 12, // Мелкий шрифт
+                                            color: Colors.grey.withOpacity(0.7), // Прозрачный серый
+                                            fontStyle: FontStyle.italic, // Курсив
+                                          ),
+                                        ),
+                                      ),
                                     Container(
                                       height: 2.0,
                                       color: lineColor,
