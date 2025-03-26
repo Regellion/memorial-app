@@ -846,7 +846,9 @@ class _NameListPageState extends State<NameListPage> {
     int selectedGender = name['gender'] ?? 1; // По умолчанию мужской пол
     String? selectedStatus = findOptionById(name['status_id']).full;
     String? selectedRank = findOptionById(name['rank_id']).full;
-    DateTime? selectedDate = DateTime.parse(name['end_date']);
+    DateTime? selectedDate = name["end_date"] == null
+        ? null
+        : DateTime.parse(name['end_date']);
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
