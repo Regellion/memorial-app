@@ -565,13 +565,15 @@ class _NameListPageState extends State<NameListPage> {
                                     ),
                                     if (endDate != null)
                                       Padding(
-                                        padding: const EdgeInsets.only(bottom: 8.0),
+                                        padding: const EdgeInsets.only(bottom: 4.0),
                                         child: Text(
                                           'Конец поминовения: ${DateFormat('dd.MM.yyyy').format(DateTime.parse(endDate))}',
                                           style: TextStyle(
                                             fontSize: 12, // Мелкий шрифт
-                                            color: Colors.grey.withOpacity(0.7), // Прозрачный серый
-                                            fontStyle: FontStyle.italic, // Курсив
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? lineColor.withOpacity(0.5) // Нежно белый в темной теме
+                                                : lineColor.withOpacity(0.7), // Темный с прозрачностью в светлой теме
+                                            fontStyle: FontStyle.italic, // Курсив для дополнительной изящности
                                           ),
                                         ),
                                       ),
@@ -751,7 +753,7 @@ class _NameListPageState extends State<NameListPage> {
                         SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: selectedRank,
-                          decoration: InputDecoration(labelText: 'Сан'), //todo как назвать?
+                          decoration: InputDecoration(labelText: 'Сан'),
                           items: _currentRankOptions.map((rank) {
                             return DropdownMenuItem(
                               value: rank.isEmpty ? null : rank,
@@ -943,7 +945,7 @@ class _NameListPageState extends State<NameListPage> {
                         SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: selectedRank?.isEmpty ?? true ? null : selectedRank,
-                          decoration: InputDecoration(labelText: 'Сан'), //todo как назвать?
+                          decoration: InputDecoration(labelText: 'Сан'),
                           items: [
                             // Явно добавляем вариант "Не выбрано" с value: null
                             DropdownMenuItem<String>(
@@ -1246,6 +1248,10 @@ final List<NameOption> _reposeStatusFemale = [
 // Список сана для мужского пола
 final List<NameOption> _rankOptionsMale = [
   NameOption.empty(),
+  NameOption(full: 'Отрока', short: 'Отр.', id: 46),
+  NameOption(full: 'Юноши', short: 'Юн.', id: 47),
+  NameOption(full: 'Младенца', short: 'Мл.', id: 48),
+  NameOption(full: 'Воина', short: 'В.', id: 49),
   NameOption(full: 'Патриарха', short: 'Патр.', id: 18),
   NameOption(full: 'Схимитрополита', short: 'Схимитр.', id: 19),
   NameOption(full: 'Митрополита', short: 'Митр.', id: 20),
@@ -1274,15 +1280,15 @@ final List<NameOption> _rankOptionsMale = [
   NameOption(full: 'Иподиакона', short: 'Ипод.', id: 43),
   NameOption(full: 'Послушника', short: 'Посл.', id: 44),
   NameOption(full: 'Чтеца', short: 'Чтец.', id: 45),
-  NameOption(full: 'Отрока', short: 'Отр.', id: 46),
-  NameOption(full: 'Юноши', short: 'Юн.', id: 47),
-  NameOption(full: 'Младенца', short: 'Мл.', id: 48),
-  NameOption(full: 'Воина', short: 'В.', id: 49),
 ];
 
 // Список сана для женского пола
 final List<NameOption> _rankOptionsFemale = [
   NameOption.empty(),
+  NameOption(full: 'Девицы', short: 'Дев', id: 57),
+  NameOption(full: 'Отроковицы', short: 'Отр.', id: 58),
+  NameOption(full: 'Младенца', short: 'Мл.', id: 59),
+  NameOption(full: 'Воина', short: 'В.', id: 60),
   NameOption(full: 'Схиигуменьи', short: 'Схиигум.', id: 50),
   NameOption(full: 'Игуменьи', short: 'Игум.', id: 51),
   NameOption(full: 'Схимонахини', short: 'Схимон.', id: 52),
@@ -1290,10 +1296,7 @@ final List<NameOption> _rankOptionsFemale = [
   NameOption(full: 'Инокини', short: 'Инок.', id: 54),
   NameOption(full: 'Матушки', short: 'Мат.', id: 55),
   NameOption(full: 'Послушницы', short: 'Посл.', id: 56),
-  NameOption(full: 'Девицы', short: 'Дев', id: 57),
-  NameOption(full: 'Отроковицы', short: 'Отр.', id: 58),
-  NameOption(full: 'Младенца', short: 'Мл.', id: 59),
-  NameOption(full: 'Воина', short: 'В.', id: 60),
+
 ];
 
 
