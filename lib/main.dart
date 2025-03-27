@@ -13,6 +13,7 @@ void main() async {
   // Проверяем и удаляем просроченные имена
   final dbHelper = DatabaseHelper();
   await dbHelper.checkAndRemoveExpiredNames();
+  await dbHelper.checkAndUpdateNewlyDepartedStatus();
 
   // Задаем фиксированную вертикальную ориентацию
   SystemChrome.setPreferredOrientations([
@@ -94,12 +95,12 @@ class _NameListHomeState extends State<NameListHome> {
     });
   }
 
-  Future<void> _addNameToList(int nameListId, String name, int gender, int statusId, int rankId, String? endDate) async {
-    await _dbHelper.addName(nameListId, name, gender, statusId, rankId, endDate);
+  Future<void> _addNameToList(int nameListId, String name, int gender, int statusId, int rankId, String? endDate, String? deathDate) async {
+    await _dbHelper.addName(nameListId, name, gender, statusId, rankId, endDate, deathDate);
   }
 
-  Future<void> _editNameInList(int nameId, String newName, int gender, int status_id, int rank_id, String? endDate) async {
-    await _dbHelper.updateName(nameId, newName, gender, status_id, rank_id, endDate);
+  Future<void> _editNameInList(int nameId, String newName, int gender, int status_id, int rank_id, String? endDate, String? deathDate) async {
+    await _dbHelper.updateName(nameId, newName, gender, status_id, rank_id, endDate, deathDate);
   }
 
   Future<void> _deleteNameFromList(int nameId) async {
@@ -242,8 +243,8 @@ class _NameListHomeState extends State<NameListHome> {
           return NameListPage(
             key: ValueKey(nameList['id']), // Передаем key сюда
             nameList: nameList,
-            onAddName: (name, gender, statusId, rankId, endDate) => _addNameToList(nameList['id'], name, gender, statusId, rankId, endDate),
-            onEditName: (nameId, newName, gender, statusId, rankId, endDate) => _editNameInList(nameId, newName, gender, statusId, rankId, endDate),
+            onAddName: (name, gender, statusId, rankId, endDate, deathDate) => _addNameToList(nameList['id'], name, gender, statusId, rankId, endDate, deathDate),
+            onEditName: (nameId, newName, gender, statusId, rankId, endDate, deathDate) => _editNameInList(nameId, newName, gender, statusId, rankId, endDate, deathDate),
             onDeleteName: (nameId) => _deleteNameFromList(nameId),
             onEditTitle: (newTitle) => _editListTitle(nameList['id'], newTitle),
             onDeleteList: () => _deleteList(nameList['id']),
@@ -318,8 +319,8 @@ class _NameListHomeState extends State<NameListHome> {
 
 class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;
-  final Function(String, int, int, int, String?) onAddName;
-  final Function(int, String, int, int, int, String?) onEditName;
+  final Function(String, int, int, int, String?, String?) onAddName;
+  final Function(int, String, int, int, int, String?, String?) onEditName;
   final Function(int) onDeleteName;
   final Function(String) onEditTitle;
   final VoidCallback onDeleteList;
@@ -375,12 +376,12 @@ class _NameListPageState extends State<NameListPage> {
     });
   }
 
-  Future<void> _addName(String name, int gender, int statusId, int rankId, String? endDate) async {
-    await widget.onAddName(name, gender, statusId, rankId, endDate);
+  Future<void> _addName(String name, int gender, int statusId, int rankId, String? endDate, String? deathDate) async {
+    await widget.onAddName(name, gender, statusId, rankId, endDate, deathDate);
     await _loadNames();
   }
 
-  Future<void> _editName(int nameId, String newName, int gender, int statusId, int rankId, String? endDate) async {
+  Future<void> _editName(int nameId, String newName, int gender, int statusId, int rankId, String? endDate, String? deathDate) async {
     // Получаем текущее имя
     final name = _names.firstWhere((name) => name['id'] == nameId);
     final currentName = name['name'];
@@ -388,6 +389,7 @@ class _NameListPageState extends State<NameListPage> {
     final currentStatus = name['status_id'];
     final currentRank = name['rank_id'];
     final currentEndDate = name['end_date'];
+    final currentDeathDate = name['death_date'];
 
     // Форматируем новое имя: первая буква заглавная, остальные маленькие
     String formattedName = newName.trim();
@@ -398,9 +400,10 @@ class _NameListPageState extends State<NameListPage> {
         gender != currentGender ||
         statusId != currentStatus ||
         rankId != currentRank ||
-        currentEndDate != endDate) {
+        currentEndDate != endDate ||
+        currentDeathDate != deathDate) {
       // Если данные изменились, вызываем метод редактирования
-      await widget.onEditName(nameId, formattedName, gender, statusId, rankId, endDate);
+      await widget.onEditName(nameId, formattedName, gender, statusId, rankId, endDate, deathDate);
       await _loadNames(); // Перезагружаем имена
     }
   }
@@ -683,10 +686,13 @@ class _NameListPageState extends State<NameListPage> {
     final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final nameController = TextEditingController();
 
+    bool showDeathDatePicker = false;  // Показывать ли выбор даты смерти
+
     int selectedGender = 1; // По умолчанию выбран мужской пол
     String? selectedStatus;
     String? selectedRank;
     DateTime? selectedDate;
+    DateTime? selectedDeathDate;
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
@@ -745,12 +751,40 @@ class _NameListPageState extends State<NameListPage> {
                             );
                           }).toList(),
                           onChanged: (value) {
+                            final statusId = findOptionByName(value).id;
                             setState(() {
                               selectedStatus = value;
+                              // Показываем выбор даты смерти для новопреставленных
+                              showDeathDatePicker = statusId == 13 || statusId == 16;
+                              if (showDeathDatePicker && selectedDeathDate == null) {
+                                selectedDeathDate = DateTime.now();  // По умолчанию текущая дата
+                              }
                             });
                           },
                         ),
                         SizedBox(height: 16),
+                        if (showDeathDatePicker)
+                          ListTile(
+                            title: Text(
+                              selectedDeathDate == null
+                                  ? 'Дата смерти:'
+                                  : 'Дата смерти: ${DateFormat('dd.MM.yyyy').format(selectedDeathDate!)}',
+                            ),
+                            trailing: Icon(Icons.calendar_today),
+                            onTap: () async {
+                              final pickedDate = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDeathDate ?? DateTime.now(),
+                                firstDate: DateTime(1900),
+                                lastDate: DateTime.now(),
+                              );
+                              if (pickedDate != null) {
+                                setState(() {
+                                  selectedDeathDate = pickedDate;
+                                });
+                              }
+                            },
+                          ),
                         DropdownButtonFormField<String>(
                           value: selectedRank,
                           decoration: InputDecoration(labelText: 'Сан'),
@@ -827,6 +861,7 @@ class _NameListPageState extends State<NameListPage> {
                             findOptionByName(selectedStatus).id,
                             findOptionByName(selectedRank).id,
                             selectedDate?.toIso8601String().split('T')[0], // Формат YYYY-MM-DD
+                            selectedDeathDate?.toIso8601String().split('T')[0],  // Добавляем дату смерти
                         );
                         Navigator.of(context).pop();
                       }
@@ -851,9 +886,14 @@ class _NameListPageState extends State<NameListPage> {
     int selectedGender = name['gender'] ?? 1; // По умолчанию мужской пол
     String? selectedStatus = findOptionById(name['status_id']).full;
     String? selectedRank = findOptionById(name['rank_id']).full;
-    DateTime? selectedDate = name["end_date"] == null
+    DateTime? selectedDate = name['end_date'] == null
         ? null
         : DateTime.parse(name['end_date']);
+    DateTime? selectedDeathDate = name['death_date'] == null
+        ? null
+        : DateTime.parse(name['death_date']);
+    bool showDeathDatePicker = name['status_id'] == 13 || name['status_id'] == 16;
+
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
@@ -937,12 +977,40 @@ class _NameListPageState extends State<NameListPage> {
                             }).toList(),
                           ],
                           onChanged: (value) {
+                            final statusId = findOptionByName(value).id;
                             setState(() {
                               selectedStatus = value;
+                              // Показываем выбор даты смерти для новопреставленных
+                              showDeathDatePicker = statusId == 13 || statusId == 16;
+                              if (showDeathDatePicker && selectedDeathDate == null) {
+                                selectedDeathDate = DateTime.now();  // По умолчанию текущая дата
+                              }
                             });
-                            },
+                          },
                         ),
                         SizedBox(height: 16),
+                        if (showDeathDatePicker)
+                          ListTile(
+                            title: Text(
+                              selectedDeathDate == null
+                                  ? 'Дата смерти:'
+                                  : 'Дата смерти: ${DateFormat('dd.MM.yyyy').format(selectedDeathDate!)}',
+                            ),
+                            trailing: Icon(Icons.calendar_today),
+                            onTap: () async {
+                              final pickedDate = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDeathDate ?? DateTime.now(),
+                                firstDate: DateTime(1900),
+                                lastDate: DateTime.now(),
+                              );
+                              if (pickedDate != null) {
+                                setState(() {
+                                  selectedDeathDate = pickedDate;
+                                });
+                              }
+                            },
+                          ),
                         DropdownButtonFormField<String>(
                           value: selectedRank?.isEmpty ?? true ? null : selectedRank,
                           decoration: InputDecoration(labelText: 'Сан'),
@@ -1030,6 +1098,7 @@ class _NameListPageState extends State<NameListPage> {
                           findOptionByName(selectedStatus).id,
                           findOptionByName(selectedRank).id,
                           selectedDate?.toIso8601String().split('T')[0], // Формат YYYY-MM-DD
+                          selectedDeathDate?.toIso8601String().split('T')[0],
                         );
                         Navigator.of(context).pop();
                       }

@@ -95,6 +95,7 @@ class DatabaseHelper {
           rank_id INTEGER,
           gender INTEGER NOT NULL DEFAULT 1,
           end_date TEXT,
+          death_date TEXT,
           FOREIGN KEY (name_list_id) REFERENCES name_lists(id) ON DELETE CASCADE
         );
       '''
@@ -230,7 +231,7 @@ class DatabaseHelper {
   }
 
   // Добавление имени
-  Future<int> addName(int nameListId, String name, int gender, int? statusId, int? rankId, String? endDate) async {
+  Future<int> addName(int nameListId, String name, int gender, int? statusId, int? rankId, String? endDate, String? deathDate) async {
     final db = await database;
     return await db.insert('names', {
       'name_list_id': nameListId,
@@ -239,6 +240,7 @@ class DatabaseHelper {
       'status_id': statusId,
       'rank_id': rankId,
       'end_date': endDate,
+      'death_date': deathDate,
     });
   }
 
@@ -254,7 +256,7 @@ class DatabaseHelper {
     await db.delete('names', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> updateName(int nameId, String newName, int gender, int? statusId, int? rankId, String? endDate) async {
+  Future<void> updateName(int nameId, String newName, int gender, int? statusId, int? rankId, String? endDate, String? deathDate) async {
     final db = await database;
     await db.update(
       'names',
@@ -264,10 +266,41 @@ class DatabaseHelper {
         'status_id': statusId,
         'rank_id': rankId,
         'end_date': endDate,
+        'death_date': deathDate,
       },
       where: 'id = ?',
       whereArgs: [nameId],
     );
+  }
+
+  Future<void> checkAndUpdateNewlyDepartedStatus() async {
+    final db = await database;
+    final now = DateTime.now();
+
+    // Находим имена со статусом новопреставленного (13 или 16)
+    final newlyDepartedNames = await db.query(
+      'names',
+      where: 'status_id IN (?, ?) AND death_date IS NOT NULL',
+      whereArgs: [13, 16],
+    );
+
+    for (final name in newlyDepartedNames) {
+      final deathDate = DateTime.parse(name['death_date'] as String);
+      final daysPassed = now.difference(deathDate).inDays;
+
+      if (daysPassed > 40) {
+        // Обновляем статус на "Приснопоминаемый" (14 или 17);
+        await db.update(
+          'names',
+          {
+            'status_id': null,
+            'death_date': null
+          },
+          where: 'id = ?',
+          whereArgs: [name['id']],
+        );
+      }
+    }
   }
 
   Future<void> updateNameListTitle(int id, String newTitle) async {
