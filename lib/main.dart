@@ -347,6 +347,20 @@ class _NameListPageState extends State<NameListPage> {
   List<Map<String, dynamic>> _names = [];
   late DatabaseHelper _dbHelper;
 
+  String? _validateName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Имя не может быть пустым';
+    }
+
+    // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
+    final regex = RegExp(r'^[А-Яа-яЁё]+$');
+    if (!regex.hasMatch(value.trim())) {
+      return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
+    }
+
+    return null; // Валидация пройдена
+  }
+
   @override
   void initState() {
     super.initState();
@@ -698,19 +712,7 @@ class _NameListPageState extends State<NameListPage> {
                             errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
                             errorMaxLines: 5, // Разрешаем перенос текста ошибки на 5 строк
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Имя не может быть пустым';
-                            }
-
-                            // Регулярное выражение для проверки, что строка состоит из одного слова на русском языке
-                            final regex = RegExp(r'^[А-Яа-яЁё]+$');
-                            if (!regex.hasMatch(value.trim())) {
-                              return 'Имя должно состоять из одного слова на русском языке. Проверьте, что имя не содержит пробелов или других символов.';
-                            }
-
-                            return null; // Валидация пройдена
-                          },
+                          validator: _validateName,
                         ),
                         SizedBox(height: 16),
                         DropdownButtonFormField<int>(
@@ -839,6 +841,7 @@ class _NameListPageState extends State<NameListPage> {
   }
 
   void _showEditDialog(BuildContext context, int nameId, String currentName) {
+    final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final nameController = TextEditingController(text: currentName);
 
     // Получаем текущие данные имени
@@ -873,150 +876,161 @@ class _NameListPageState extends State<NameListPage> {
               content: SingleChildScrollView(
                 child: Container(
                   width: double.maxFinite,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: nameController,
-                        decoration: InputDecoration(hintText: 'Введите новое имя'),
-                      ),
-                      SizedBox(height: 16),
-                      DropdownButtonFormField<int>(
-                        value: selectedGender,
-                        decoration: InputDecoration(labelText: 'Пол'),
-                        items: [
-                          DropdownMenuItem(value: 1, child: Text('Мужской')),
-                          DropdownMenuItem(value: 0, child: Text('Женский')),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            selectedGender = value!;
-                            // Обновляем список статусов при изменении пола
-                            _updateStatusOptions(widget.nameList['type'], selectedGender);
-
-                            // Проверяем, существует ли текущий статус в новом списке
-                            if (!_currentStatusOptions.contains(selectedStatus)) {
-                              selectedStatus = null; // Сбрасываем статус, если он не существует в новом списке
-                            }
-
-                            // Проверяем, существует ли текущий сан в новом списке
-                            if(!_currentRankOptions.contains(selectedRank)) {
-                              selectedRank = null;
-                            }
-                          });
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: selectedStatus?.isEmpty ?? true ? null : selectedStatus,
-                        decoration: InputDecoration(labelText: 'Статус'),
-                        items: [
-                          // Явно добавляем вариант "Не выбрано" с value: null
-                          DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('Не выбрано'),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            hintText: 'Введите новое имя',
+                            errorStyle: TextStyle(color: Colors.red),
+                            errorMaxLines: 5,
                           ),
-                          // Добавляем только непустые статусы
-                          ..._currentStatusOptions.where((s) => s.isNotEmpty).map((status) {
-                            return DropdownMenuItem<String>(
-                              value: status,
-                              child: Text(status),
-                            );
-                          }).toList(),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            selectedStatus = value;
-                          });
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: selectedRank?.isEmpty ?? true ? null : selectedRank,
-                        decoration: InputDecoration(labelText: 'Сан'), //todo как назвать?
-                        items: [
-                          // Явно добавляем вариант "Не выбрано" с value: null
-                          DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('Не выбрано'),
-                          ),
-                          // Добавляем только непустые статусы
-                          ..._currentRankOptions.where((s) => s.isNotEmpty).map((rank) {
-                            return DropdownMenuItem<String>(
-                              value: rank,
-                              child: Text(rank),
-                            );
-                          }).toList(),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            selectedRank = value;
-                          });
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      ListTile(
-                        title: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            selectedDate == null
-                                ? 'Поминать до:'
-                                : 'Поминать до: ${DateFormat('dd.MM.yyyy').format(selectedDate!)}',
-                            style: TextStyle(
-                              fontSize: 16, // Начальный размер шрифта
-                            ),
-                            maxLines: 1, // Гарантируем одну строку
-                            overflow: TextOverflow.visible, // Позволяет изменять размер шрифта
-                          ),
+                          validator: _validateName,
                         ),
-                        trailing: Icon(Icons.calendar_today),
-                        onTap: () async {
-                          final pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime(2100),
-                          );
-                          if (pickedDate != null) {
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: selectedGender,
+                          decoration: InputDecoration(labelText: 'Пол'),
+                          items: [
+                            DropdownMenuItem(value: 1, child: Text('Мужской')),
+                            DropdownMenuItem(value: 0, child: Text('Женский')),
+                          ],
+                          onChanged: (value) {
                             setState(() {
-                              selectedDate = pickedDate;
-                            });
-                          }
-                        },
-                      ),
-                      if (selectedDate != null)
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedDate = null;
+                              selectedGender = value!;
+                              // Обновляем список статусов при изменении пола
+                              _updateStatusOptions(widget.nameList['type'], selectedGender);
+
+                              // Проверяем, существует ли текущий статус в новом списке
+                              if (!_currentStatusOptions.contains(selectedStatus)) {
+                                selectedStatus = null; // Сбрасываем статус, если он не существует в новом списке
+                              }
+
+                              // Проверяем, существует ли текущий сан в новом списке
+                              if(!_currentRankOptions.contains(selectedRank)) {
+                                selectedRank = null;
+                              }
                             });
                           },
-                          child: Text('Удалить дату'),
                         ),
-                    ],
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedStatus?.isEmpty ?? true ? null : selectedStatus,
+                          decoration: InputDecoration(labelText: 'Статус'),
+                          items: [
+                            // Явно добавляем вариант "Не выбрано" с value: null
+                            DropdownMenuItem<String>(
+                              value: null,
+                              child: Text('Не выбрано'),
+                            ),
+                            // Добавляем только непустые статусы
+                            ..._currentStatusOptions.where((s) => s.isNotEmpty).map((status) {
+                              return DropdownMenuItem<String>(
+                                value: status,
+                                child: Text(status),
+                              );
+                            }).toList(),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedStatus = value;
+                            });
+                            },
+                        ),
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedRank?.isEmpty ?? true ? null : selectedRank,
+                          decoration: InputDecoration(labelText: 'Сан'), //todo как назвать?
+                          items: [
+                            // Явно добавляем вариант "Не выбрано" с value: null
+                            DropdownMenuItem<String>(
+                              value: null,
+                              child: Text('Не выбрано'),
+                            ),
+                            // Добавляем только непустые статусы
+                            ..._currentRankOptions.where((s) => s.isNotEmpty).map((rank) {
+                              return DropdownMenuItem<String>(
+                                value: rank,
+                                child: Text(rank),
+                              );
+                            }).toList(),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedRank = value;
+                            });
+                            },
+                        ),
+                        SizedBox(height: 16),
+                        ListTile(
+                          title: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              selectedDate == null
+                                  ? 'Поминать до:'
+                                  : 'Поминать до: ${DateFormat('dd.MM.yyyy').format(selectedDate!)}',
+                              style: TextStyle(
+                                fontSize: 16, // Начальный размер шрифта
+                              ),
+                              maxLines: 1, // Гарантируем одну строку
+                              overflow: TextOverflow.visible, // Позволяет изменять размер шрифта
+                            ),
+                          ),
+                          trailing: Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime(2100),
+                            );
+                            if (pickedDate != null) {
+                              setState(() {
+                                selectedDate = pickedDate;
+                              });
+                            }
+                            },
+                        ),
+                        if (selectedDate != null)
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                selectedDate = null;
+                              });
+                              },
+                            child: Text('Удалить дату'),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () {
-                    if (nameController.text.isNotEmpty) {
-                      // Форматируем имя: первая буква заглавная, остальные маленькие
-                      String formattedName = nameController.text.trim();
-                      formattedName = formattedName[0].toUpperCase() +
-                          formattedName.substring(1).toLowerCase();
+                    // Проверяем валидацию перед сохранением
+                    if (_formKey.currentState!.validate()) {
+                      if (nameController.text.isNotEmpty) {
+                        // Форматируем имя: первая буква заглавная, остальные маленькие
+                        String formattedName = nameController.text.trim();
+                        formattedName = formattedName[0].toUpperCase() +
+                            formattedName.substring(1).toLowerCase();
 
-                      // Вызываем метод редактирования имени с новыми параметрами
-                      _editName(
+                        // Вызываем метод редактирования имени с новыми параметрами
+                        _editName(
                           nameId,
                           formattedName,
                           selectedGender,
                           findOptionByName(selectedStatus).id,
                           findOptionByName(selectedRank).id,
                           selectedDate?.toIso8601String().split('T')[0], // Формат YYYY-MM-DD
-                      );
-                      Navigator.of(context).pop();
+                        );
+                        Navigator.of(context).pop();
+                      }
                     }
                   },
                   child: Text('Сохранить'),
