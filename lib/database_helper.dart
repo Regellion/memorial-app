@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:memorial_online_app/settings.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -56,6 +57,7 @@ class DatabaseHelper {
   Future<void> _onCreate(Database db, int version) async {
     // Создаем таблицы, если они не существуют
     await _createTablesIfNotExist(db);
+    await _insertDefaultSettings(db);
   }
 
   Future<void> _createTablesIfNotExist(Database db) async {
@@ -180,6 +182,12 @@ class DatabaseHelper {
         'description': 'Использовать сокращенные префиксы имен',
         'value': '1',
       });
+
+      await db.insert('settings', {
+        'name': 'sort_type',
+        'description': 'Тип сортировки имен',
+        'value': '0', // SortType.none
+      });
     }
   }
 
@@ -215,13 +223,30 @@ class DatabaseHelper {
   }
 
   // Загрузка имен по списку
-  Future<List<Map<String, dynamic>>> loadNames(int nameListId) async {
+  Future<List<Map<String, dynamic>>> loadNames(int nameListId, SortType sortType) async {
     final db = await database;
-    return await db.query(
+    String orderBy = 'id'; // По умолчанию сортируем по id (порядок добавления)
+
+    switch (sortType) {
+      case SortType.name:
+        orderBy = 'name COLLATE NOCASE ASC';
+        break;
+      case SortType.rankId:
+        // Сортируем по id сана (важности), записи без сана (rank_id IS NULL или 0) идут в конец
+        orderBy = 'CASE WHEN rank_id IS NULL OR rank_id = 0 THEN 1 ELSE 0 END, rank_id ASC, name COLLATE NOCASE ASC';
+        break;
+      case SortType.none:
+      orderBy = 'id ASC';
+        break;
+    }
+    final result = await db.query(
       'names',
       where: 'name_list_id = ?',
       whereArgs: [nameListId],
+      orderBy: orderBy,
     );
+
+    return result;
   }
 
   // Добавление списка

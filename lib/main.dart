@@ -108,7 +108,7 @@ class _NameListHomeState extends State<NameListHome> {
     // Проверяем, остались ли имена в текущем списке
     final currentListId = _currentListId;
     if (currentListId != null) {
-      final names = await _dbHelper.loadNames(currentListId);
+      final names = await _dbHelper.loadNames(currentListId, SortType.none);
       if (names.isEmpty) {
         // Если список пуст, удаляем его
         await _deleteList(currentListId);
@@ -369,8 +369,24 @@ class _NameListPageState extends State<NameListPage> {
     _loadNames();
   }
 
+  // Добавляем слушатель изменений настроек
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final settings = Provider.of<Settings>(context);
+    settings.addListener(_loadNames); // Перезагружаем имена при изменении настроек
+  }
+
+  @override
+  void dispose() {
+    final settings = Provider.of<Settings>(context, listen: false);
+    settings.removeListener(_loadNames); // Важно убрать слушатель при уничтожении
+    super.dispose();
+  }
+
   Future<void> _loadNames() async {
-    final names = await _dbHelper.loadNames(widget.nameList['id']);
+    final settings = Provider.of<Settings>(context, listen: false);
+    final names = await _dbHelper.loadNames(widget.nameList['id'], settings.sortType);
     setState(() {
       _names = List<Map<String, dynamic>>.from(names); // Создаем изменяемую копию
     });
@@ -1273,9 +1289,48 @@ class SettingsPage extends StatelessWidget {
               },
             ),
           ),
+          ListTile(
+            title: Text('Сортировка имен'),
+            subtitle: Text(_getSortTypeDescription(settings.sortType)),
+            trailing: DropdownButton<SortType>(
+              value: settings.sortType,
+              onChanged: (value) {
+                if (value != null) {
+                  settings.setSortType(value);
+                }
+              },
+              items: [
+                DropdownMenuItem(
+                  value: SortType.none,
+                  child: Text('Без сортировки'),
+                ),
+                DropdownMenuItem(
+                  value: SortType.name,
+                  child: Text('По имени'),
+                ),
+                DropdownMenuItem(
+                  value: SortType.rankId,
+                  child: Text('По важности сана'),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  String _getSortTypeDescription(SortType type) {
+    switch (type) {
+      case SortType.none:
+        return 'Текущая: Без сортировки';
+      case SortType.name:
+        return 'Текущая: По имени';
+      case SortType.rankId:
+        return 'Текущая: По важности сана';
+      default:
+        return '';
+    }
   }
 }
 
