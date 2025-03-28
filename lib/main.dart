@@ -1310,7 +1310,7 @@ class SettingsPage extends StatelessWidget {
                 ),
                 DropdownMenuItem(
                   value: SortType.rankId,
-                  child: Text('По важности сана'),
+                  child: Text('По сану'),
                 ),
               ],
             ),
@@ -1327,7 +1327,7 @@ class SettingsPage extends StatelessWidget {
       case SortType.name:
         return 'Текущая: По имени';
       case SortType.rankId:
-        return 'Текущая: По важности сана';
+        return 'Текущая: По сану';
       default:
         return '';
     }
