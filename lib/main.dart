@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'settings.dart';
 import 'database_helper.dart';
+import 'package:introduction_screen/introduction_screen.dart';
 
 void main() async {
   await AppData.initialize();
@@ -15,22 +17,30 @@ void main() async {
   await dbHelper.checkAndRemoveExpiredNames();
   await dbHelper.checkAndUpdateNewlyDepartedStatus();
 
-  // Задаем фиксированную вертикальную ориентацию
+  // Проверяем первый запуск
+  final prefs = await SharedPreferences.getInstance();
+  bool isFirstLaunch = prefs.getBool('first_launch') ?? true;
+
   SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp, // Только вертикальная ориентация
+    DeviceOrientation.portraitUp,
   ]).then((_) {
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (context) => Settings()),
         ],
-        child: NameListApp(),
+        child: NameListApp(isFirstLaunch: isFirstLaunch),
       ),
     );
   });
 }
 
+// Модифицируем NameListApp для обработки первого запуска
 class NameListApp extends StatelessWidget {
+  final bool isFirstLaunch;
+
+  const NameListApp({Key? key, required this.isFirstLaunch}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Consumer<Settings>(
@@ -43,10 +53,261 @@ class NameListApp extends StatelessWidget {
           darkTheme: ThemeData.dark().copyWith(
             visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
-          themeMode: settings.themeMode, // Используем выбранную тему
-          home: NameListHome(), // По умолчанию открывается "Помянник"
+          themeMode: settings.themeMode,
+          home: isFirstLaunch ? OnboardingScreen() : NameListHome(),
         );
       },
+    );
+  }
+}
+
+// Добавляем новый виджет для обучения
+class OnboardingScreen extends StatelessWidget {
+  final _introKey = GlobalKey<IntroductionScreenState>();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    final pageDecoration = PageDecoration(
+      titleTextStyle: TextStyle(
+        fontSize: 28.0,
+        fontWeight: FontWeight.w700,
+        color: isDarkMode ? Colors.white : Colors.grey,
+      ),
+      bodyTextStyle: TextStyle(
+        fontSize: 19.0,
+        color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+      ),
+      bodyPadding: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+      pageColor: theme.scaffoldBackgroundColor,
+      imagePadding: EdgeInsets.zero,
+    );
+
+    return IntroductionScreen(
+      key: _introKey,
+      globalBackgroundColor: theme.scaffoldBackgroundColor,
+      pages: [
+        // Приветственный экран
+        PageViewModel(
+          title: "Помянник",
+          body: "Добро пожаловать в приложение для поминовения живых и усопших. Создавайте списки, добавляйте имена и молитесь за своих близких.",
+          image: Center(
+            child: Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Image.asset(
+                'assets/images/app_icon.png', // Путь к иконке приложения
+                width: 100,
+                height: 100,
+              ),
+            ),
+          ),
+          decoration: pageDecoration.copyWith(
+            bodyAlignment: Alignment.center,
+          ),
+        ),
+
+        // Добавление имени
+        PageViewModel(
+          title: "Добавление имени",
+          bodyWidget: Column(
+            children: [
+              Text(
+                "Нажмите на эту кнопку внизу экрана, чтобы добавить новое имя в список",
+                style: TextStyle(
+                  fontSize: 19.0,
+                  color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                margin: EdgeInsets.symmetric(horizontal: 40),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "Добавить имя",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+          image: Center(child: SizedBox.shrink()), // Пустой виджет для изображения
+          decoration: pageDecoration.copyWith(
+            contentMargin: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+          ),
+        ),
+
+        // Редактирование и удаление
+        PageViewModel(
+          title: "Редактирование и удаление",
+          body: "Сдвиньте имя вправо для удаления или влево для редактирования",
+          image: Center(
+            child: Container(
+              margin: EdgeInsets.only(top: 20),
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 250,
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(Icons.edit, color: Colors.blue),
+                        Text("Имя для поминовения"),
+                        Icon(Icons.delete, color: Colors.red),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    "← Редактировать    Удалить →",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          decoration: pageDecoration,
+        ),
+
+        // Добавление списка
+        PageViewModel(
+          title: "Добавление списка",
+          body: "Нажмите на эту кнопку в правом верхнем углу, чтобы создать новый список",
+          image: Center(
+            child: Container(
+              margin: EdgeInsets.only(top: 20),
+              child: Stack(
+                children: [
+                  Container(
+                    width: 300,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        "Мой список",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: FloatingActionButton(
+                      mini: true,
+                      onPressed: () {},
+                      child: Icon(Icons.add),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          decoration: pageDecoration,
+        ),
+
+        // Переключение между списками
+        PageViewModel(
+          title: "Переключение между списками",
+          body: "Сдвиньте список влево или вправо для переключения между вашими списками",
+          image: Center(
+            child: Container(
+              margin: EdgeInsets.only(top: 20),
+              child: Image.asset(
+                'assets/images/onboarding.png', // Путь к вашему скриншоту
+                width: MediaQuery.of(context).size.width * 0.8,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          decoration: pageDecoration,
+        ),
+      ],
+      onDone: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('first_launch', false);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => NameListHome()),
+        );
+      },
+      showSkipButton: true,
+      skip: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8),
+        child: Text(
+          'Пропустить',
+          style: TextStyle(
+            fontSize: 14, // Уменьшенный размер шрифта
+            fontWeight: FontWeight.w600,
+            color: isDarkMode ? Colors.grey : theme.primaryColor,
+          ),
+        ),
+      ),
+      next: Container(
+        margin: EdgeInsets.only(left: 8),
+        child: Icon(
+          Icons.arrow_forward,
+          color: isDarkMode ? Colors.grey : theme.primaryColor,
+          size: 24, // Фиксированный размер иконки
+        ),
+      ),
+      done: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8),
+        child: Text(
+          'Начать',
+          style: TextStyle(
+            fontSize: 14, // Уменьшенный размер шрифта
+            fontWeight: FontWeight.w600,
+            color: isDarkMode ? Colors.grey : theme.primaryColor,
+          ),
+        ),
+      ),
+      dotsDecorator: DotsDecorator(
+        size: Size(8.0, 8.0), // Уменьшенный размер точек
+        color: isDarkMode ? Colors.grey[600]! : Colors.grey,
+        activeColor: isDarkMode ? Colors.white : theme.primaryColor,
+        activeSize: Size(20.0, 8.0), // Уменьшенный активный размер
+        spacing: EdgeInsets.symmetric(horizontal: 4), // Уменьшенное расстояние между точками
+        activeShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(25.0)),
+        ),
+      ),
     );
   }
 }
