@@ -8,11 +8,59 @@ import 'settings.dart';
 import 'database_helper.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 
-void main() async {
-  await AppData.initialize();
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Проверяем и удаляем просроченные имена
+  runApp(
+    MaterialApp(
+      home: FutureBuilder(
+        future: _initializeApp(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            final isFirstLaunch = snapshot.data as bool;
+            return MultiProvider(
+              providers: [
+                ChangeNotifierProvider(create: (context) => Settings()),
+              ],
+              child: NameListApp(isFirstLaunch: isFirstLaunch),
+            );
+          }
+          return SplashScreen();
+        },
+      ),
+      debugShowCheckedModeBanner: false,
+    ),
+  );
+}
+
+class SplashScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/app_icon.png',
+              width: 150,
+              height: 150,
+            ),
+            SizedBox(height: 20),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<bool> _initializeApp() async {
+  await AppData.initialize();
+
   final dbHelper = DatabaseHelper();
   await dbHelper.checkAndRemoveExpiredNames();
   await dbHelper.checkAndUpdateNewlyDepartedStatus();
@@ -21,18 +69,11 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   bool isFirstLaunch = prefs.getBool('first_launch') ?? true;
 
-  SystemChrome.setPreferredOrientations([
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-  ]).then((_) {
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (context) => Settings()),
-        ],
-        child: NameListApp(isFirstLaunch: isFirstLaunch),
-      ),
-    );
-  });
+  ]);
+
+  return isFirstLaunch;
 }
 
 // Модифицируем NameListApp для обработки первого запуска
