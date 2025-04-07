@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'settings.dart';
 import 'database_helper.dart';
@@ -441,6 +442,50 @@ class _NameListHomeState extends State<NameListHome> {
       });
     }
   }
+  // Добавьте метод в _NameListHomeState:
+  void _showDeveloperInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('О программе'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Приложение "Помянник"'),
+            SizedBox(height: 8),
+            Text('Версия: ${_dbHelper.appVersion}'),
+            SizedBox(height: 8),
+            Text('Разработчик: Диакон Артема'),
+            SizedBox(height: 8),
+            InkWell(
+              onTap: () => _launchEmail(),
+              child: Row(
+                children: [
+                  Text(
+                    'Контакты: ',
+                  ),
+                  Text(
+                    'moy.prikhod@internet.ru',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
+              )
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Закрыть'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -487,47 +532,104 @@ class _NameListHomeState extends State<NameListHome> {
       ),
       // Выпадающее меню
       drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text(
-                'Меню',
-                style: TextStyle(color: Colors.white, fontSize: 24),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  DrawerHeader(
+                    decoration: BoxDecoration(color: Colors.blue),
+                    child: Text(
+                      'Меню',
+                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.list),
+                    title: Text('Помянник'),
+                    onTap: () {
+                      Navigator.pop(context); // Закрыть Drawer
+                      // Уже находимся на странице "Помянник", поэтому ничего не делаем
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.article),
+                    title: Text('Новости'),
+                    onTap: () {
+                      Navigator.pop(context); // Закрыть Drawer
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => NewsPage()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.settings), // Иконка настроек
+                    title: Text('Настройки'),
+                    onTap: () {
+                      Navigator.pop(context); // Закрыть Drawer
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SettingsPage()),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-            ListTile(
-              leading: Icon(Icons.list),
-              title: Text('Помянник'),
+            InkWell(
               onTap: () {
-                Navigator.pop(context); // Закрыть Drawer
-                // Уже находимся на странице "Помянник", поэтому ничего не делаем
+                Navigator.pop(context);
+                _showDeveloperInfo(context);
               },
+              child: Container(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Блок с информацией о разработчике
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'О программе',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).textTheme.bodySmall?.color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            ListTile(
-              leading: Icon(Icons.article),
-              title: Text('Новости'),
-              onTap: () {
-                Navigator.pop(context); // Закрыть Drawer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => NewsPage()),
-                );
-              },
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1)))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  SizedBox(height: 8),
+                  Text(
+                    '© ${DateTime.now().year} Все права защищены',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            ListTile(
-              leading: Icon(Icons.settings), // Иконка настроек
-              title: Text('Настройки'),
-              onTap: () {
-                Navigator.pop(context); // Закрыть Drawer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsPage()),
-                );
-              },
-            ),
-          ],
+          ]
         ),
       ),
       body: _nameLists.isEmpty
@@ -617,7 +719,26 @@ class _NameListHomeState extends State<NameListHome> {
       },
     );
   }
-}
+
+  Future<void> _launchEmail() async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'moy.prikhod@internet.ru',
+      queryParameters: {
+        'subject': 'Помянник: обратная связь',
+        'body': 'Здравствуйте!\n\n', // Предзаполненный текст
+      },
+    );
+
+    if (await canLaunchUrl(emailLaunchUri)) {
+      await launchUrl(emailLaunchUri);
+    } else {
+      // Если нет почтового клиента, показываем сообщение
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось открыть почтовый клиент')),
+      );
+    }
+  }}
 
 class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;

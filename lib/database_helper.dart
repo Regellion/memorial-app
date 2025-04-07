@@ -6,6 +6,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseHelper {
+  late String appVersion;
   Future<String> _getAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
     return packageInfo.version; // Например, "1.2.3"
@@ -13,6 +14,7 @@ class DatabaseHelper {
 
   Future<int> convertVersionToNumber() async {
     String version = await _getAppVersion();
+    appVersion = version;
     final parts = version.split('.'); // Разделяем на мажорную, минорную и патч-версии
     final major = int.parse(parts[0]);
     final minor = int.parse(parts[1]);
