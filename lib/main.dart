@@ -725,8 +725,8 @@ class _NameListHomeState extends State<NameListHome> {
       scheme: 'mailto',
       path: 'moy.prikhod@internet.ru',
       queryParameters: {
-        'subject': 'Помянник: обратная связь',
-        'body': 'Здравствуйте!\n\n', // Предзаполненный текст
+        'subject': 'Помянник:_обратная_связь',
+        'body': 'Здравствуйте!', // Предзаполненный текст
       },
     );
 
