@@ -765,8 +765,6 @@ class NameListPage extends StatefulWidget {
 }
 
 class _NameListPageState extends State<NameListPage> {
-  final FocusNode _addNameFocusNode = FocusNode();
-  final FocusNode _editNameFocusNode = FocusNode();
   // Текущий список статусов, который будет обновляться динамически
   List<String> _currentStatusOptions = [];
   List<String> _currentRankOptions = [];
@@ -812,8 +810,6 @@ class _NameListPageState extends State<NameListPage> {
     } catch (_) {
       // Игнорируем ошибку, если контекст уже недействителен
     }
-    _addNameFocusNode.dispose(); // Не забываем освободить ресурсы
-    _editNameFocusNode.dispose();
     super.dispose();
   }
 
@@ -1151,10 +1147,6 @@ class _NameListPageState extends State<NameListPage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            // После построения виджета запрашиваем фокус
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _addNameFocusNode.requestFocus();
-            });
             return AlertDialog(
               title: Text('Добавить имя'),
               content: SingleChildScrollView(
@@ -1180,6 +1172,7 @@ class _NameListPageState extends State<NameListPage> {
                             return TextFormField(
                               controller: controller,
                               focusNode: focusNode,
+                              autofocus: true,
                               decoration: InputDecoration(
                                 hintText: 'Введите имя',
                                 errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
@@ -1376,9 +1369,6 @@ class _NameListPageState extends State<NameListPage> {
     final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final TextEditingController _typeAheadController = TextEditingController(text: currentName);
 
-    // Сбрасываем состояние FocusNode перед использованием
-    _editNameFocusNode.unfocus();
-
     // Получаем текущие данные имени
     final name = _names.firstWhere((name) => name['id'] == nameId);
     int selectedGender = name['gender'] ?? 1; // По умолчанию мужской пол
@@ -1409,10 +1399,6 @@ class _NameListPageState extends State<NameListPage> {
     showDialog(
       context: context,
       builder: (context) {
-        // Запрашиваем фокус после отрисовки
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _editNameFocusNode.requestFocus();
-        });
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
@@ -1439,6 +1425,7 @@ class _NameListPageState extends State<NameListPage> {
                             return TextFormField(
                               controller: controller,
                               focusNode: focusNode,
+                              autofocus: true,
                               decoration: InputDecoration(
                                 hintText: 'Введите новое имя',
                                 errorStyle: TextStyle(color: Colors.red), // Стиль текста ошибки
