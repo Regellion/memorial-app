@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
@@ -1139,6 +1141,10 @@ class _NameListPageState extends State<NameListPage> {
     DateTime? selectedDate;
     DateTime? selectedDeathDate;
 
+    Timer? _genderSelectionTimer;
+    bool showGenderSelection = false;
+    String? _lastSelectedSuggestion;
+
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
 
@@ -1179,6 +1185,36 @@ class _NameListPageState extends State<NameListPage> {
                                 errorMaxLines: 5, // Разрешаем перенос текста ошибки на 5 строк
                               ),
                               validator: _validateName,
+                              onChanged: (value) {
+                                // Отменяем предыдущий таймер, если он был
+                                _genderSelectionTimer?.cancel();
+
+                                // Если поле пустое, скрываем выбор пола
+                                if (value.isEmpty) {
+                                  setState(() {
+                                    showGenderSelection = false;
+                                    _lastSelectedSuggestion = null;
+                                  });
+                                  return;
+                                }
+
+                                // Если текущий текст не совпадает с последним выбранным из подсказок
+                                if (_lastSelectedSuggestion != null &&
+                                    value != _lastSelectedSuggestion) {
+                                  setState(() {
+                                    _lastSelectedSuggestion = null;
+                                  });
+                                }
+
+                                _genderSelectionTimer = Timer(Duration(milliseconds: 500), () {
+                                  final exactMatch = _menologyNames.any((name) =>
+                                  name.name.toLowerCase() == value.toLowerCase());
+
+                                  setState(() {
+                                    showGenderSelection = !exactMatch && _lastSelectedSuggestion == null;
+                                  });
+                                });
+                              },
                             );
                           },
                           itemBuilder: (context, MenologyName suggestion) {
@@ -1193,6 +1229,8 @@ class _NameListPageState extends State<NameListPage> {
                               selectedGender = selected.gender;
                               // Обновляем список статусов при изменении пола
                               _updateStatusOptions(widget.nameList['type'], selectedGender);
+                              showGenderSelection = false; // Скрываем выбор пола после выбора из подсказки
+                              _lastSelectedSuggestion = selected.name; // Присавиваем значения выбранного из подсказки имени
 
                               // Проверяем, существует ли текущий статус в новом списке
                               if (!_currentStatusOptions.contains(selectedStatus)) {
@@ -1205,29 +1243,29 @@ class _NameListPageState extends State<NameListPage> {
                               }
                             });
                           },
-                          emptyBuilder: (context) {
-                            // Ничего не отображает, если список пуст
-                            return SizedBox.shrink();
-                          },
+                          // Ничего не отображает, если список пуст
+                          emptyBuilder: (context) => SizedBox.shrink(),
                         ),
                         SizedBox(height: 16),
-                        DropdownButtonFormField<int>(
-                          value: selectedGender,
-                          decoration: InputDecoration(labelText: 'Пол'),
-                          items: [
-                            DropdownMenuItem(value: 1, child: Text('Мужской')),
-                            DropdownMenuItem(value: 0, child: Text('Женский')),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              selectedGender = value!;
-                              _updateStatusOptions(widget.nameList['type'], selectedGender);
-                              // Сбрасываем выбранные статус и ранг при изменении пола
-                              selectedStatus = null;
-                              selectedRank = null;
-                            });
-                          },
-                        ),
+                        if (showGenderSelection) ...[
+                          DropdownButtonFormField<int>(
+                            value: selectedGender,
+                            decoration: InputDecoration(labelText: 'Пол'),
+                            items: [
+                              DropdownMenuItem(value: 1, child: Text('Мужской')),
+                              DropdownMenuItem(value: 0, child: Text('Женский')),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                selectedGender = value!;
+                                _updateStatusOptions(widget.nameList['type'], selectedGender);
+                                selectedStatus = null;
+                                selectedRank = null;
+                              });
+                            },
+                          ),
+                          SizedBox(height: 16),
+                        ],
                         SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: selectedStatus,
@@ -3430,4 +3468,5 @@ final List<MenologyName> _menologyNames = [
   MenologyName("Уалентина", 1),
   MenologyName("Уалериана", 1),
   MenologyName("Уалерия", 1),
+  MenologyName("test", 1)
 ];
