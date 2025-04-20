@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -367,14 +368,34 @@ class _NameListHomeState extends State<NameListHome> {
   final PageController _pageController = PageController(); // Контроллер для PageView
   int? _currentListId; // Текущий id списка
   List<Map<String, dynamic>> _nameLists = []; // Список всех списков
+  Map<int, List<Map<String, dynamic>>> _namesCache = {}; // Кеш имен всех списков
 
   late DatabaseHelper _dbHelper;
+  // Новые переменные для управления каруселью
+  final ScrollController _carouselController = ScrollController();
+  double _carouselOpacity = 0.0;
+  bool _carouselVisible = false;
+
+  final maxVisibleNames = 4; // Максимальное количество отображаемых имен
+  double get containerHeight => MediaQuery.of(context).size.height * 0.1; // 10% высоты экрана
+  double get itemHeight => MediaQuery.of(context).size.height * 0.05; // 5% высоты экрана
 
   @override
   void initState() {
     super.initState();
     _dbHelper = DatabaseHelper();
     _loadNameLists();
+    // Инициализируем контроллер карусели
+    _carouselController.addListener(() {
+      // Можно добавить дополнительную логику при прокрутке
+    });
+  }
+
+
+  @override
+  void dispose() {
+    _carouselController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadNameLists() async {
@@ -385,6 +406,28 @@ class _NameListHomeState extends State<NameListHome> {
       if (_nameLists.isNotEmpty && _currentListId == null) {
         _currentListId = _nameLists[0]['id'];
       }
+    });
+  }
+
+  void _hideCarousel() {
+    setState(() {
+      _carouselOpacity = 0.0;
+      _namesCache = {}; // Очищаем кеш!
+    });
+    Future.delayed(Duration(milliseconds: 300), () {
+      setState(() {
+        _carouselVisible = false;
+      });
+    });
+  }
+
+  void _showCarousel() {
+    setState(() {
+      _carouselVisible = true;
+      if (_namesCache.isEmpty) {
+        _preloadNames();
+      }
+      _carouselOpacity = 1.0;
     });
   }
 
@@ -536,129 +579,377 @@ class _NameListHomeState extends State<NameListHome> {
       // Выпадающее меню
       drawer: Drawer(
         child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  DrawerHeader(
-                    decoration: BoxDecoration(color: Colors.blue),
-                    child: Text(
-                      'Меню',
-                      style: TextStyle(color: Colors.white, fontSize: 24),
-                    ),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.list),
-                    title: Text('Помянник'),
-                    onTap: () {
-                      Navigator.pop(context); // Закрыть Drawer
-                      // Уже находимся на странице "Помянник", поэтому ничего не делаем
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.article),
-                    title: Text('Новости'),
-                    onTap: () {
-                      Navigator.pop(context); // Закрыть Drawer
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => NewsPage()),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.settings), // Иконка настроек
-                    title: Text('Настройки'),
-                    onTap: () {
-                      Navigator.pop(context); // Закрыть Drawer
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => SettingsPage()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            InkWell(
-              onTap: () {
-                Navigator.pop(context);
-                _showDeveloperInfo(context);
-              },
-              child: Container(
-                padding: EdgeInsets.all(16),
-                child: Row(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
                   children: [
-                    // Блок с информацией о разработчике
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
+                    DrawerHeader(
+                      decoration: BoxDecoration(color: Colors.blue),
+                      child: Text(
+                        'Меню',
+                        style: TextStyle(color: Colors.white, fontSize: 24),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'О программе',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.list),
+                      title: Text('Помянник'),
+                      onTap: () {
+                        Navigator.pop(context); // Закрыть Drawer
+                        // Уже находимся на странице "Помянник", поэтому ничего не делаем
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.article),
+                      title: Text('Новости'),
+                      onTap: () {
+                        Navigator.pop(context); // Закрыть Drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => NewsPage()),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.settings), // Иконка настроек
+                      title: Text('Настройки'),
+                      onTap: () {
+                        Navigator.pop(context); // Закрыть Drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SettingsPage()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeveloperInfo(context);
+                },
+                child: Container(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      // Блок с информацией о разработчике
+                      Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'О программе',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).textTheme.bodySmall?.color,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1)))),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+
+                    SizedBox(height: 8),
+                    Text(
+                      '© ${DateTime.now().year} Все права защищены',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1)))),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  SizedBox(height: 8),
-                  Text(
-                    '© ${DateTime.now().year} Все права защищены',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ]
+            ]
         ),
       ),
-      body: _nameLists.isEmpty
-          ? Center(child: Text('Нет списков. Добавьте новый список.'))
-          : PageView.builder(
-        controller: _pageController,
-        itemCount: _nameLists.length,
-        onPageChanged: (index) {
-          setState(() {
-            _currentListId = _nameLists[index]['id'];
-          });
-        },
-        itemBuilder: (context, index) {
-          final nameList = _nameLists[index];
-          return NameListPage(
-            key: ValueKey(nameList['id']), // Передаем key сюда
-            nameList: nameList,
-            onAddName: (name, gender, statusId, rankId, endDate, deathDate) => _addNameToList(nameList['id'], name, gender, statusId, rankId, endDate, deathDate),
-            onEditName: (nameId, newName, gender, statusId, rankId, endDate, deathDate) => _editNameInList(nameId, newName, gender, statusId, rankId, endDate, deathDate),
-            onDeleteName: (nameId) => _deleteNameFromList(nameId),
-            onEditTitle: (newTitle) => _editListTitle(nameList['id'], newTitle),
-            onDeleteList: () => _deleteList(nameList['id']),
-          );
-        },
+      body: Stack(
+        children: [
+          // Основной контент
+          NotificationListener<ScrollNotification>(
+            onNotification: (scrollNotification) {
+              return false;
+            },
+            child: _buildMainContent(),
+          ),
+
+          // Полноэкранная карусель списков
+          if (_carouselVisible)
+            GestureDetector(
+              onVerticalDragUpdate: (details) {
+                if (details.primaryDelta! > 5) {
+                  _hideCarousel();
+                }
+              },
+              onTap: _hideCarousel,
+              child: AnimatedOpacity(
+                duration: Duration(milliseconds: 300),
+                opacity: _carouselOpacity,
+                child: Container(
+                  color: Colors.black.withOpacity(0.7),
+                  child: Column(
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).padding.top + 20),
+                      Text(
+                        'Ваши списки',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(
+                        height: containerHeight + (maxVisibleNames + 1) * itemHeight,
+                        child: PageView.builder(
+                          controller: PageController(
+                            viewportFraction: 0.4,
+                            initialPage: _nameLists.length > 2 ? _getCurrentListIndex() + _nameLists.length * 1000 : _getCurrentListIndex(),
+                          ),
+                          physics: BouncingScrollPhysics(), // Добавляем эффект инерции и "отскока"
+                          itemCount: _nameLists.length > 2 ? _nameLists.length * 2000 : _nameLists.length,
+                          onPageChanged: (index) {
+                            if (_nameLists.length > 2) {
+                              index = index % _nameLists.length;
+                            }
+                            setState(() {
+                              _currentListId = _nameLists[index]['id'];
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            if (_nameLists.length > 2) {
+                              index = index % _nameLists.length;
+                            }
+                            final list = _nameLists[index];
+                            final isCurrent = list['id'] == _currentListId;
+                            final color = list['type'] == 0 ? Colors.red : Colors.blue;
+
+                            return GestureDetector(
+                              onTap: () {
+                                _pageController.jumpToPage(index);
+                                _hideCarousel();
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Container(
+                                  margin: EdgeInsets.symmetric(horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).cardColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isCurrent ? color : Colors.transparent,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: _buildListCard(list, color),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      FloatingActionButton(
+                        onPressed: _hideCarousel,
+                        child: Icon(Icons.close),
+                        backgroundColor: Colors.red,
+                      ),
+                      SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  Future<void> _preloadNames() async {
+    final settings = Provider.of<Settings>(context, listen: false);
+    Map<int, List<Map<String, dynamic>>> tempCache = {};
+
+    for (var list in _nameLists) {
+      tempCache[list['id']] =
+      await _dbHelper.loadNames(list['id'], settings.sortType);
+    }
+
+    setState(() {
+      _namesCache = tempCache;
+    });
+  }
+
+  Widget _buildListCard(Map<String, dynamic> list, Color color) {
+    final names = _namesCache[list['id']] ?? [];
+    final remainingNames = max(names.length - maxVisibleNames, 0);
+
+    final frameImage = list['type'] == 0
+        ? 'assets/images/health_frame_title.png'
+        : 'assets/images/repose_frame_title.png';
+    return Container(
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // Важно для ограничения высоты
+        children: [
+          // Шапка с изображением и названием
+          Container(
+            height: MediaQuery.of(context).size.height * 0.07,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  frameImage,
+                  height: 33, // Фиксированная высота изображения
+                  fit: BoxFit.contain,
+                ),
+                Text(
+                  list['title'],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: color),
+
+          // Список имен с фиксированной высотой
+          SizedBox(
+            height: (maxVisibleNames + 1) * itemHeight,
+            child: Column(
+              children: [
+                // Видимая часть списка
+                Expanded(
+                  child: ListView.builder(
+                    physics: NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: min(names.length, maxVisibleNames),
+                    itemBuilder: (context, index) {
+                      final name = names[index];
+                      return Container(
+                        height: itemHeight,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: color.withOpacity(0.7),
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          [_getStatusText(name), name['name']].join(' '),
+                          style: TextStyle(fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Счетчик оставшихся имен
+                if (remainingNames > 0)
+                  Container(
+                    height: itemHeight,
+                    alignment: Alignment.center,
+                    child: Text(
+                      'и ещё $remainingNames ${_getNounForm(remainingNames)}',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _getCurrentListIndex() {
+    if (_currentListId == null) return 0;
+    return _nameLists.indexWhere((list) => list['id'] == _currentListId);
+  }
+
+  // Вспомогательная функция для склонения слова "имя"
+  String _getNounForm(int number) {
+    if (number % 100 >= 11 && number % 100 <= 14) {
+      return 'имён';
+    }
+
+    switch (number % 10) {
+      case 1: return 'имя';
+      case 2:
+      case 3:
+      case 4: return 'имени';
+      default: return 'имён';
+    }
+  }
+
+  Widget _buildMainContent() {
+    return _nameLists.isEmpty
+        ? Center(child: Text('Нет списков. Добавьте новый список.'))
+        : PageView.builder(
+      controller: _pageController,
+      itemCount: _nameLists.length,
+      onPageChanged: (index) {
+        setState(() {
+          _currentListId = _nameLists[index]['id'];
+        });
+      },
+      itemBuilder: (context, index) {
+        final nameList = _nameLists[index];
+        return NameListPage(
+          key: ValueKey(nameList['id']), // Передаем key сюда
+          nameList: nameList,
+          onAddName: (name, gender, statusId, rankId, endDate, deathDate) => _addNameToList(nameList['id'], name, gender, statusId, rankId, endDate, deathDate),
+          onEditName: (nameId, newName, gender, statusId, rankId, endDate, deathDate) => _editNameInList(nameId, newName, gender, statusId, rankId, endDate, deathDate),
+          onDeleteName: (nameId) => _deleteNameFromList(nameId),
+          onEditTitle: (newTitle) => _editListTitle(nameList['id'], newTitle),
+          onDeleteList: () => _deleteList(nameList['id']),
+          onShowCarousel: _showCarousel,  // Передаем методы
+          onHideCarousel: _hideCarousel,
+        );
+      },
+    );
+  }
+
+  String _getStatusText(Map<String, dynamic> name) {
+    final statusId = name['status_id'];
+    final rankId = name['rank_id'];
+
+    // Получаем текстовые представления
+    final statusText = statusId != null
+        ? findOptionById(statusId).short
+        : '';
+
+    final rankText = rankId != null
+        ? findOptionById(rankId).short
+        : '';
+
+    // Комбинируем результат
+    final result = [statusText, rankText].where((s) => s.isNotEmpty).join(' ');
+
+    return result.isNotEmpty ? result : '';
   }
 
   void _showAddListDialog(BuildContext context) {
@@ -741,7 +1032,8 @@ class _NameListHomeState extends State<NameListHome> {
         SnackBar(content: Text('Не удалось открыть почтовый клиент')),
       );
     }
-  }}
+  }
+}
 
 class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;
@@ -750,6 +1042,8 @@ class NameListPage extends StatefulWidget {
   final Function(int) onDeleteName;
   final Function(String) onEditTitle;
   final VoidCallback onDeleteList;
+  final VoidCallback onShowCarousel;  // Новый колбэк
+  final VoidCallback onHideCarousel;  // Новый колбэк
 
   // Добавляем key в конструктор
   NameListPage({
@@ -760,13 +1054,18 @@ class NameListPage extends StatefulWidget {
     required this.onDeleteName,
     required this.onEditTitle,
     required this.onDeleteList,
+    required this.onShowCarousel,
+    required this.onHideCarousel,
   }) : super(key: key); // Передаем key в super
 
   @override
   _NameListPageState createState() => _NameListPageState();
 }
 
-class _NameListPageState extends State<NameListPage> {
+class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // Сохранять состояние
+
   // Текущий список статусов, который будет обновляться динамически
   List<String> _currentStatusOptions = [];
   List<String> _currentRankOptions = [];
@@ -816,11 +1115,15 @@ class _NameListPageState extends State<NameListPage> {
   }
 
   Future<void> _loadNames() async {
+    if (!mounted) return; // Проверка, что виджет все еще в дереве
+
     final settings = Provider.of<Settings>(context, listen: false);
     final names = await _dbHelper.loadNames(widget.nameList['id'], settings.sortType);
-    setState(() {
-      _names = List<Map<String, dynamic>>.from(names); // Создаем изменяемую копию
-    });
+    if (mounted) { // Дополнительная проверка перед setState
+      setState(() {
+        _names = List<Map<String, dynamic>>.from(names);
+      });
+    }
   }
 
   Future<void> _addName(String name, int gender, int statusId, int rankId, String? endDate, String? deathDate) async {
@@ -857,6 +1160,7 @@ class _NameListPageState extends State<NameListPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final settings = Provider.of<Settings>(context);
     String frameImage = widget.nameList['type'] == 0
         ? 'assets/images/health_frame_title.png'
@@ -1057,14 +1361,23 @@ class _NameListPageState extends State<NameListPage> {
                             borderRadius: BorderRadius.circular(8.0),
                             color: Colors.transparent,
                           ),
-                          child: Text(
-                            "Добавить имя",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue,
+                          child: GestureDetector(
+                            onPanUpdate: (details) {
+                              if (details.delta.dy < 0) {
+                                widget.onShowCarousel();
+                              } else if (details.delta.dy > 0) {
+                                widget.onHideCarousel();
+                              }
+                            },
+                            child: Text(
+                              "Добавить имя",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -3468,5 +3781,4 @@ final List<MenologyName> _menologyNames = [
   MenologyName("Уалентина", 1),
   MenologyName("Уалериана", 1),
   MenologyName("Уалерия", 1),
-  MenologyName("test", 1)
 ];
