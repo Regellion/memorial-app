@@ -1065,6 +1065,7 @@ class NameListPage extends StatefulWidget {
 class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true; // Сохранять состояние
+  bool _isButtonPressed = false;
 
   // Текущий список статусов, который будет обновляться динамически
   List<String> _currentStatusOptions = [];
@@ -1351,15 +1352,31 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       GestureDetector(
-                        onTap: () {
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: (_) {
+                          setState(() {
+                            _isButtonPressed = true;
+                          });
+                        },
+                        onTapUp: (_) {
+                          setState(() {
+                            _isButtonPressed = false;
+                          });
                           _showAddNameDialog(context);
+                        },
+                        onTapCancel: () {
+                          setState(() {
+                            _isButtonPressed = false;
+                          });
                         },
                         child: Container(
                           padding: EdgeInsets.symmetric(vertical: 16.0),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.blue),
+                            border: Border.all(
+                              color: _isButtonPressed ? Colors.grey : Colors.blue,
+                            ),
                             borderRadius: BorderRadius.circular(8.0),
-                            color: Colors.transparent,
+                            color: _isButtonPressed ? Colors.blue : Colors.transparent,
                           ),
                           child: GestureDetector(
                             onPanUpdate: (details) {
@@ -1374,7 +1391,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.blue,
+                                color: _isButtonPressed ? Colors.grey : Colors.blue,
                               ),
                               textAlign: TextAlign.center,
                             ),
