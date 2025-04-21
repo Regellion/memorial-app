@@ -92,7 +92,7 @@ class NameListApp extends StatelessWidget {
     return Consumer<Settings>(
       builder: (context, settings, child) {
         return MaterialApp(
-          title: 'Мой приход',
+          title: 'Мой приход. Помянник',
           theme: ThemeData(
             visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
