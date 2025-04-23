@@ -1391,7 +1391,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                                       Padding(
                                         padding: const EdgeInsets.only(bottom: 4.0),
                                         child: Text(
-                                          'Конец поминовения: ${DateFormat('dd.MM.yyyy').format(DateTime.parse(endDate))}',
+                                          'Окончание поминовения: ${DateFormat('dd.MM.yyyy').format(DateTime.parse(endDate))}',
                                           style: TextStyle(
                                             fontSize: 12, // Мелкий шрифт
                                             color: Theme.of(context).brightness == Brightness.dark
