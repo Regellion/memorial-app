@@ -22,7 +22,7 @@ void main() {
         future: _initializeApp(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            final isFirstLaunch = snapshot.data as bool;
+            final isFirstLaunch = snapshot.data as bool;;
             return MultiProvider(
               providers: [
                 ChangeNotifierProvider(create: (context) => Settings()),
@@ -135,10 +135,12 @@ class OnboardingScreen extends StatelessWidget {
       key: _introKey,
       globalBackgroundColor: theme.scaffoldBackgroundColor,
       pages: [
-        // Приветственный экран
+        // 1. Приветственный экран
         PageViewModel(
           title: "Помянник",
-          body: "Добро пожаловать в приложение для поминовения живых и усопших. Создавайте списки, добавляйте имена и молитесь за своих близких.",
+          body: "Добро пожаловать в Помянник - современное приложение для поминовения живых "
+              "и усопших. Здесь вы можете создавать списки имён, подобно церковным запискам, "
+              "и молиться за своих близких.",
           image: Center(
             child: Container(
               padding: EdgeInsets.all(20),
@@ -158,96 +160,30 @@ class OnboardingScreen extends StatelessWidget {
           ),
         ),
 
-        // Добавление имени
+        // 2. Списки
         PageViewModel(
-          title: "Добавление имени",
-          bodyWidget: Column(
-            children: [
-              Text(
-                "Нажмите на эту кнопку внизу экрана, чтобы добавить новое имя в список",
-                style: TextStyle(
-                  fontSize: 19.0,
-                  color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                margin: EdgeInsets.symmetric(horizontal: 40),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.blue),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  "Добавить имя",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-          image: Center(child: SizedBox.shrink()), // Пустой виджет для изображения
-          decoration: pageDecoration.copyWith(
-            contentMargin: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
-          ),
-        ),
-
-        // Редактирование и удаление
-        PageViewModel(
-          title: "Редактирование и удаление",
-          body: "Сдвиньте имя вправо для удаления или влево для редактирования",
+          title: "Списки",
+          body: "Списки - это аналог церковных записок. Они бывают двух видов:\n\n• О здравии - "
+              "для поминовения живых\n• О упокоении - для поминовения усопших\n\n"
+              "Вы можете создавать несколько списков для разных нужд (например, для разных храмов).",
           image: Center(
             child: Container(
               margin: EdgeInsets.only(top: 20),
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 250,
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Icon(Icons.edit, color: Colors.blue),
-                        Text("Имя для поминовения"),
-                        Icon(Icons.delete, color: Colors.red),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    "← Редактировать    Удалить →",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: isDarkMode ? Colors.grey[300] : Colors.grey[600],
-                    ),
-                  ),
-                ],
+              child: Image.asset(
+                'assets/images/list.png', // Путь к вашему скриншоту
+                width: MediaQuery.of(context).size.width * 0.8,
+                fit: BoxFit.contain,
               ),
             ),
           ),
           decoration: pageDecoration,
         ),
 
-        // Добавление списка
+        // 3. Добавление списка
         PageViewModel(
           title: "Добавление списка",
-          body: "Нажмите на эту кнопку в правом верхнем углу, чтобы создать новый список",
+          body: "Нажмите на эту кнопку в правом верхнем углу, чтобы создать новый список."
+              " Вы сможете выбрать его тип (о здравии или упокоении) и дать ему понятное для Вас название.",
           image: Center(
             child: Container(
               margin: EdgeInsets.only(top: 20),
@@ -289,7 +225,7 @@ class OnboardingScreen extends StatelessWidget {
           decoration: pageDecoration,
         ),
 
-        // Переключение между списками
+        // 4. Переключение между списками
         PageViewModel(
           title: "Переключение между списками",
           body: "Сдвиньте список влево или вправо для переключения между вашими списками",
@@ -297,9 +233,129 @@ class OnboardingScreen extends StatelessWidget {
             child: Container(
               margin: EdgeInsets.only(top: 20),
               child: Image.asset(
-                'assets/images/onboarding.png', // Путь к вашему скриншоту
+                'assets/images/onboarding-swipe-right-left.png',
                 width: MediaQuery.of(context).size.width * 0.8,
                 fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          decoration: pageDecoration,
+        ),
+
+        // 5. Быстрый выбор списков
+        PageViewModel(
+          title: "Быстрый выбор списков",
+          body: "Для удобного переключения между списками сдвиньте экран вверх от кнопки "
+              "\"Добавить имя\". В появившемся меню вы сможете быстро выбрать нужный список "
+              "без перелистывания.",
+          image: Center(
+            child: Container(
+              margin: EdgeInsets.only(top: 20),
+              child: Image.asset(
+                'assets/images/onboarding-swipe-up.png',
+                width: MediaQuery.of(context).size.width * 0.8,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          decoration: pageDecoration,
+        ),
+
+        // 6. Добавление имени
+        PageViewModel(
+          title: "Добавление имени",
+          bodyWidget: Column(
+            children: [
+              Text(
+                "Чтобы добавить имя в текущий список, нажмите на кнопку 'Добавить имя' внизу экрана."
+                    "В появившемся меню Вам будет доступна настройка дополнительной информации, "
+                    "такой как сан, статус, время поминовения, пол.",
+                style: TextStyle(
+                  fontSize: 18.0,
+                  color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                margin: EdgeInsets.symmetric(horizontal: 40),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "Добавить имя",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+          image: Center(
+            child: Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Image.asset(
+                'assets/images/app_icon.png', // Путь к иконке приложения
+                width: 100,
+                height: 100,
+              ),
+            ),
+          ),
+          decoration: pageDecoration.copyWith(
+            contentMargin: EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+          ),
+        ),
+
+        // 7. Редактирование и удаление
+        PageViewModel(
+          title: "Редактирование и удаление",
+          body: "Сдвиньте имя вправо для удаления или влево для редактирования",
+          image: Center(
+            child: Container(
+              margin: EdgeInsets.only(top: 20),
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 250,
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(Icons.edit, color: Colors.blue),
+                        Text("Имя для поминовения"),
+                        Icon(Icons.delete, color: Colors.red),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    "← Редактировать    Удалить →",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -345,11 +401,11 @@ class OnboardingScreen extends StatelessWidget {
         ),
       ),
       dotsDecorator: DotsDecorator(
-        size: Size(8.0, 8.0), // Уменьшенный размер точек
+        size: Size(6.0, 6.0), // Уменьшенный размер точек
         color: isDarkMode ? Colors.grey[600]! : Colors.grey,
         activeColor: isDarkMode ? Colors.white : theme.primaryColor,
-        activeSize: Size(20.0, 8.0), // Уменьшенный активный размер
-        spacing: EdgeInsets.symmetric(horizontal: 4), // Уменьшенное расстояние между точками
+        activeSize: Size(15.0, 6.0), // Уменьшенный активный размер
+        spacing: EdgeInsets.symmetric(horizontal: 3), // Уменьшенное расстояние между точками
         activeShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(25.0)),
         ),
