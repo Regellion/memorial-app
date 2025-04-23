@@ -429,6 +429,8 @@ class _NameListHomeState extends State<NameListHome> {
   late DatabaseHelper _dbHelper;
   // Новые переменные для управления каруселью
   final ScrollController _carouselController = ScrollController();
+  int? _tempCarouselListId; // Временный ID списка в карусели
+
   double _carouselOpacity = 0.0;
   bool _carouselVisible = false;
 
@@ -469,6 +471,8 @@ class _NameListHomeState extends State<NameListHome> {
     setState(() {
       _carouselOpacity = 0.0;
       _namesCache = {}; // Очищаем кеш!
+      // Не обновляем _currentListId, сохраняем выбранный в основном интерфейсе
+      _tempCarouselListId = null; // Сбрасываем временное значение
     });
     Future.delayed(Duration(milliseconds: 300), () {
       setState(() {
@@ -480,6 +484,7 @@ class _NameListHomeState extends State<NameListHome> {
   void _showCarousel() {
     setState(() {
       _carouselVisible = true;
+      _tempCarouselListId = _currentListId; // Устанавливаем начальное значение
       if (_namesCache.isEmpty) {
         _preloadNames();
       }
@@ -783,7 +788,7 @@ class _NameListHomeState extends State<NameListHome> {
                               index = index % _nameLists.length;
                             }
                             setState(() {
-                              _currentListId = _nameLists[index]['id'];
+                              _tempCarouselListId = _nameLists[index]['id']; // Обновляем только временное значение
                             });
                           },
                           itemBuilder: (context, index) {
@@ -796,6 +801,9 @@ class _NameListHomeState extends State<NameListHome> {
 
                             return GestureDetector(
                               onTap: () {
+                                setState(() {
+                                  _currentListId = _nameLists[index]['id']; // Обновляем основной ID только при выборе
+                                });
                                 _pageController.jumpToPage(index);
                                 _hideCarousel();
                               },
@@ -942,8 +950,13 @@ class _NameListHomeState extends State<NameListHome> {
   }
 
   int _getCurrentListIndex() {
-    if (_currentListId == null) return 0;
-    return _nameLists.indexWhere((list) => list['id'] == _currentListId);
+    // Используем временный ID если карусель открыта, иначе основной
+    final idToUse = _carouselVisible && _tempCarouselListId != null
+        ? _tempCarouselListId
+        : _currentListId;
+
+    if (idToUse == null) return 0;
+    return _nameLists.indexWhere((list) => list['id'] == idToUse);
   }
 
   // Вспомогательная функция для склонения слова "имя"
