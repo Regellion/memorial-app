@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -34,6 +35,15 @@ void main() {
         },
       ),
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [
+        const Locale('en', ''), // Английский
+        const Locale('ru', ''), // Русский
+      ],
     ),
   );
 }
@@ -1690,11 +1700,13 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             ),
                             trailing: Icon(Icons.calendar_today),
                             onTap: () async {
+                              final locale = Localizations.localeOf(context);
                               final pickedDate = await showDatePicker(
                                 context: context,
                                 initialDate: selectedDeathDate ?? DateTime.now(),
                                 firstDate: DateTime(1900),
                                 lastDate: DateTime.now(),
+                                locale: locale,
                               );
                               if (pickedDate != null) {
                                 setState(() {
@@ -1736,11 +1748,13 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                           ),
                           trailing: Icon(Icons.calendar_today),
                           onTap: () async {
+                            final locale = Localizations.localeOf(context);
                             final pickedDate = await showDatePicker(
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
                               lastDate: DateTime(2100),
+                              locale: locale,
                             );
                             if (pickedDate != null) {
                               setState(() {
@@ -1953,11 +1967,13 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             ),
                             trailing: Icon(Icons.calendar_today),
                             onTap: () async {
+                              final locale = Localizations.localeOf(context);
                               final pickedDate = await showDatePicker(
                                 context: context,
                                 initialDate: selectedDeathDate ?? DateTime.now(),
                                 firstDate: DateTime(1900),
                                 lastDate: DateTime.now(),
+                                locale: locale,
                               );
                               if (pickedDate != null) {
                                 setState(() {
@@ -2007,18 +2023,20 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                           ),
                           trailing: Icon(Icons.calendar_today),
                           onTap: () async {
+                            final locale = Localizations.localeOf(context);
                             final pickedDate = await showDatePicker(
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime.now(),
                               lastDate: DateTime(2100),
+                              locale: locale,
                             );
                             if (pickedDate != null) {
                               setState(() {
                                 selectedDate = pickedDate;
                               });
                             }
-                            },
+                          },
                         ),
                         if (selectedDate != null)
                           TextButton(
