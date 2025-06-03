@@ -1532,8 +1532,6 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final TextEditingController _typeAheadController = TextEditingController();
 
-    bool showDeathDatePicker = false;  // Показывать ли выбор даты смерти
-
     int selectedGender = 1; // По умолчанию выбран мужской пол
     String? selectedStatus;
     String? selectedRank;
@@ -1676,19 +1674,14 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             );
                           }).toList(),
                           onChanged: (value) {
-                            final statusId = findOptionByName(value).id;
                             setState(() {
                               selectedStatus = value;
-                              // Показываем выбор даты смерти для новопреставленных
-                              showDeathDatePicker = statusId == 13 || statusId == 16;
-                              if (showDeathDatePicker && selectedDeathDate == null) {
-                                selectedDeathDate = DateTime.now();  // По умолчанию текущая дата
-                              }
+                              selectedDeathDate ??= DateTime.now();
                             });
                           },
                         ),
                         SizedBox(height: 16),
-                        if (showDeathDatePicker)
+                        if (widget.nameList['type'] == 1)
                           ListTile(
                             title: Text(
                               selectedDeathDate == null
@@ -1817,8 +1810,6 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     DateTime? selectedDeathDate = name['death_date'] == null
         ? null
         : DateTime.parse(name['death_date']);
-    bool showDeathDatePicker = name['status_id'] == 13 || name['status_id'] == 16;
-
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
@@ -1945,19 +1936,15 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             }).toList(),
                           ],
                           onChanged: (value) {
-                            final statusId = findOptionByName(value).id;
                             setState(() {
                               selectedStatus = value;
                               // Показываем выбор даты смерти для новопреставленных
-                              showDeathDatePicker = statusId == 13 || statusId == 16;
-                              if (showDeathDatePicker && selectedDeathDate == null) {
-                                selectedDeathDate = DateTime.now();  // По умолчанию текущая дата
-                              }
+                              selectedDeathDate ??= DateTime.now();
                             });
                           },
                         ),
                         SizedBox(height: 16),
-                        if (showDeathDatePicker)
+                        if (widget.nameList['type'] == 1)
                           ListTile(
                             title: Text(
                               selectedDeathDate == null

@@ -316,12 +316,11 @@ class DatabaseHelper {
       final daysPassed = now.difference(deathDate).inDays;
 
       if (daysPassed > 40) {
-        // Обновляем статус на "Приснопоминаемый" (14 или 17);
+        // Убираем статус новопесставленного
         await db.update(
           'names',
           {
             'status_id': null,
-            'death_date': null
           },
           where: 'id = ?',
           whereArgs: [name['id']],
