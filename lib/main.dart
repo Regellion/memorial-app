@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
@@ -1142,6 +1143,11 @@ class NameListPage extends StatefulWidget {
 }
 
 class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClientMixin {
+  bool _isButtonVisible = true; // видимость кнопки добавить имя при прокрутке списка
+  ScrollController _scrollController = ScrollController();
+  bool _isAtBottom = true; // Долистали ли до конца списка
+  Timer? _scrollEndTimer; // Таймер для появления кнопки
+
   @override
   bool get wantKeepAlive => true; // Сохранять состояние
   bool _isButtonPressed = false;
@@ -1172,6 +1178,53 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     super.initState();
     _dbHelper = DatabaseHelper();
     _loadNames();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_scrollListener);
+    // Инициализируем состояние после построения виджета
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _isAtBottom = _scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 5.0;
+        });
+      }
+    });
+  }
+
+  void _scrollListener() {
+    _scrollEndTimer?.cancel();
+
+    // Проверяем, достигли ли мы нижней границы
+    final isAtBottom = _scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 30.0; //todo потом переделать на адаптивность
+
+    setState(() {
+      _isAtBottom = isAtBottom;
+    });
+
+    if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
+      // Прокрутка вниз (вверх по экрану)
+      if (_isButtonVisible && !_isAtBottom) {
+        setState(() {
+          _isButtonVisible = false;
+        });
+      }
+    } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward || _isAtBottom) {
+      // Прокрутка вверх (вниз по экрану) или достигли низа
+      if (!_isButtonVisible) {
+        setState(() {
+          _isButtonVisible = true;
+        });
+      }
+    }
+
+    _scrollEndTimer = Timer(Duration(milliseconds: 500), () {
+      if (!_scrollController.position.isScrollingNotifier.value && !_isButtonVisible) {
+        setState(() {
+          _isButtonVisible = true;
+        });
+      }
+    });
   }
 
   // Добавляем слушатель изменений настроек
@@ -1191,6 +1244,10 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     } catch (_) {
       // Игнорируем ошибку, если контекст уже недействителен
     }
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
+    _scrollController.dispose();
+
     super.dispose();
   }
 
@@ -1323,6 +1380,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                   child: Container(
                     width: MediaQuery.of(context).size.width * 0.75,
                     child: ListView.builder(
+                      controller: _scrollController,
                       itemCount: _names.length,
                       itemBuilder: (context, index) {
                         final name = _names[index];
@@ -1425,65 +1483,69 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTapDown: (_) {
-                          setState(() {
-                            _isButtonPressed = true;
-                          });
-                        },
-                        onTapUp: (_) {
-                          setState(() {
-                            _isButtonPressed = false;
-                          });
-                          _showAddNameDialog(context);
-                        },
-                        onTapCancel: () {
-                          setState(() {
-                            _isButtonPressed = false;
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: _isButtonPressed ? Colors.grey : Colors.blue,
-                            ),
-                            borderRadius: BorderRadius.circular(8.0),
-                            color: _isButtonPressed ? Colors.blue : Colors.transparent,
-                          ),
-                          child: GestureDetector(
-                            onPanUpdate: (details) {
-                              if (details.delta.dy < 0) {
-                                widget.onShowCarousel();
-                              } else if (details.delta.dy > 0) {
-                                widget.onHideCarousel();
-                              }
-                            },
-                            child: Text(
-                              "Добавить имя",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
+                AnimatedOpacity(
+                  opacity: _isButtonVisible ? 1.0 : 0.0,
+                  duration: Duration(milliseconds: 300),
+                  child:Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapDown: (_) {
+                            setState(() {
+                              _isButtonPressed = true;
+                            });
+                          },
+                          onTapUp: (_) {
+                            setState(() {
+                              _isButtonPressed = false;
+                            });
+                            _showAddNameDialog(context);
+                          },
+                          onTapCancel: () {
+                            setState(() {
+                              _isButtonPressed = false;
+                            });
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(
                                 color: _isButtonPressed ? Colors.grey : Colors.blue,
                               ),
-                              textAlign: TextAlign.center,
+                              borderRadius: BorderRadius.circular(8.0),
+                              color: _isButtonPressed ? Colors.blue : Colors.transparent,
+                            ),
+                            child: GestureDetector(
+                              onPanUpdate: (details) {
+                                if (details.delta.dy < 0) {
+                                  widget.onShowCarousel();
+                                } else if (details.delta.dy > 0) {
+                                  widget.onHideCarousel();
+                                }
+                              },
+                              child: Text(
+                                "Добавить имя",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: _isButtonPressed ? Colors.grey : Colors.blue,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      SizedBox(height: 4.0),
-                      Text(
-                        "Имя пишется в Родительном падеже",
-                        style: TextStyle(color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                        SizedBox(height: 4.0),
+                        Text(
+                          "Имя пишется в Родительном падеже",
+                          style: TextStyle(color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -2984,7 +3046,7 @@ final List<MenologyName> _menologyNames = [
   MenologyName("Илиана", 1),
   MenologyName("Илия", 1),
   MenologyName("Илиодора", 1),
-  MenologyName("Илию", 1),
+  MenologyName("Илии", 1),
   MenologyName("Иллирика", 1),
   MenologyName("Индиса", 1),
   MenologyName("Инна", 1),
