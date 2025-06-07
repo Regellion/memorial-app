@@ -258,7 +258,16 @@ class DatabaseHelper {
   }
 
   // Добавление имени
-  Future<int> addName(int nameListId, String name, int gender, int? statusId, int? rankId, String? endDate, String? deathDate) async {
+  Future<int> addName(
+      int nameListId,
+      String name,
+      int gender,
+      int? statusId,
+      int? rankId,
+      String? endDate,
+      String? deathDate,
+      bool andChad, {String? description}
+      ) async {
     final db = await database;
     return await db.insert('names', {
       'name_list_id': nameListId,
@@ -268,6 +277,8 @@ class DatabaseHelper {
       'rank_id': rankId,
       'end_date': endDate,
       'death_date': deathDate,
+      'and_chad': andChad ? 1 : 0,
+      'description': description,
     });
   }
 
@@ -283,7 +294,16 @@ class DatabaseHelper {
     await db.delete('names', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> updateName(int nameId, String newName, int gender, int? statusId, int? rankId, String? endDate, String? deathDate) async {
+  Future<void> updateName(
+      int nameId,
+      String newName,
+      int gender,
+      int? statusId,
+      int? rankId,
+      String? endDate,
+      String? deathDate,
+      bool andChad, {String? description}
+      ) async {
     final db = await database;
     await db.update(
       'names',
@@ -294,6 +314,8 @@ class DatabaseHelper {
         'rank_id': rankId,
         'end_date': endDate,
         'death_date': deathDate,
+        'and_chad': andChad ? 1 : 0,
+        'description': description,
       },
       where: 'id = ?',
       whereArgs: [nameId],
@@ -340,6 +362,16 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Версия 1.0.3
+    if (oldVersion < 10003) {
+      try {
+        // Добавляем новые поля в таблицу names
+        await db.execute('ALTER TABLE names ADD COLUMN and_chad INTEGER');
+        await db.execute('ALTER TABLE names ADD COLUMN description TEXT');
+      } catch (_) {
+        //todo log
+      }
+    }
     if (oldVersion == 10000) { //версия 1.0.0
     }
     if (oldVersion <= 20000) { //версия 2.0.0

@@ -449,6 +449,13 @@ class _NameListHomeState extends State<NameListHome> {
   double get containerHeight => MediaQuery.of(context).size.height * 0.1; // 10% высоты экрана
   double get itemHeight => MediaQuery.of(context).size.height * 0.05; // 5% высоты экрана
 
+  String _getChadText(Map<String, dynamic> name) {
+    final settings = Provider.of<Settings>(context);
+    //todo сейчас дублируется данный метод. Подумать как этого избежать
+    final andChad = name['and_chad'] == 1;
+    return andChad ? (settings.useShortNames ? 'со чад.' :'со чадами') : '';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -516,12 +523,12 @@ class _NameListHomeState extends State<NameListHome> {
     });
   }
 
-  Future<void> _addNameToList(int nameListId, String name, int gender, int statusId, int rankId, String? endDate, String? deathDate) async {
-    await _dbHelper.addName(nameListId, name, gender, statusId, rankId, endDate, deathDate);
+  Future<void> _addNameToList(int nameListId, String name, int gender, int statusId, int rankId, String? endDate, String? deathDate, bool andChad) async {
+    await _dbHelper.addName(nameListId, name, gender, statusId, rankId, endDate, deathDate, andChad);
   }
 
-  Future<void> _editNameInList(int nameId, String newName, int gender, int status_id, int rank_id, String? endDate, String? deathDate) async {
-    await _dbHelper.updateName(nameId, newName, gender, status_id, rank_id, endDate, deathDate);
+  Future<void> _editNameInList(int nameId, String newName, int gender, int status_id, int rank_id, String? endDate, String? deathDate, bool andChad) async {
+    await _dbHelper.updateName(nameId, newName, gender, status_id, rank_id, endDate, deathDate, andChad);
   }
 
   Future<void> _deleteNameFromList(int nameId) async {
@@ -929,7 +936,7 @@ class _NameListHomeState extends State<NameListHome> {
                           ),
                         ),
                         child: Text(
-                          [_getStatusText(name), name['name']].join(' '),
+                          [_getStatusText(name), name['name'], _getChadText(name)].join(' '),
                           style: TextStyle(fontSize: 12),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1001,8 +1008,8 @@ class _NameListHomeState extends State<NameListHome> {
         return NameListPage(
           key: ValueKey(nameList['id']), // Передаем key сюда
           nameList: nameList,
-          onAddName: (name, gender, statusId, rankId, endDate, deathDate) => _addNameToList(nameList['id'], name, gender, statusId, rankId, endDate, deathDate),
-          onEditName: (nameId, newName, gender, statusId, rankId, endDate, deathDate) => _editNameInList(nameId, newName, gender, statusId, rankId, endDate, deathDate),
+          onAddName: (name, gender, statusId, rankId, endDate, deathDate, andChad) => _addNameToList(nameList['id'], name, gender, statusId, rankId, endDate, deathDate, andChad),
+          onEditName: (nameId, newName, gender, statusId, rankId, endDate, deathDate, andChad) => _editNameInList(nameId, newName, gender, statusId, rankId, endDate, deathDate, andChad),
           onDeleteName: (nameId) => _deleteNameFromList(nameId),
           onEditTitle: (newTitle) => _editListTitle(nameList['id'], newTitle),
           onDeleteList: () => _deleteList(nameList['id']),
@@ -1117,8 +1124,8 @@ class _NameListHomeState extends State<NameListHome> {
 
 class NameListPage extends StatefulWidget {
   final Map<String, dynamic> nameList;
-  final Function(String, int, int, int, String?, String?) onAddName;
-  final Function(int, String, int, int, int, String?, String?) onEditName;
+  final Function(String, int, int, int, String?, String?, bool) onAddName;
+  final Function(int, String, int, int, int, String?, String?, bool) onEditName;
   final Function(int) onDeleteName;
   final Function(String) onEditTitle;
   final VoidCallback onDeleteList;
@@ -1263,12 +1270,12 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     }
   }
 
-  Future<void> _addName(String name, int gender, int statusId, int rankId, String? endDate, String? deathDate) async {
-    await widget.onAddName(name, gender, statusId, rankId, endDate, deathDate);
+  Future<void> _addName(String name, int gender, int statusId, int rankId, String? endDate, String? deathDate, bool andChad) async {
+    await widget.onAddName(name, gender, statusId, rankId, endDate, deathDate, andChad);
     await _loadNames();
   }
 
-  Future<void> _editName(int nameId, String newName, int gender, int statusId, int rankId, String? endDate, String? deathDate) async {
+  Future<void> _editName(int nameId, String newName, int gender, int statusId, int rankId, String? endDate, String? deathDate, bool andChad) async {
     // Получаем текущее имя
     final name = _names.firstWhere((name) => name['id'] == nameId);
     final currentName = name['name'];
@@ -1277,6 +1284,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     final currentRank = name['rank_id'];
     final currentEndDate = name['end_date'];
     final currentDeathDate = name['death_date'];
+    final currentAndChad = name['and_chad'];
 
     // Форматируем новое имя: первая буква заглавная, остальные маленькие
     String formattedName = newName.trim();
@@ -1288,11 +1296,19 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
         statusId != currentStatus ||
         rankId != currentRank ||
         currentEndDate != endDate ||
-        currentDeathDate != deathDate) {
+        currentDeathDate != deathDate ||
+        currentAndChad != andChad) {
       // Если данные изменились, вызываем метод редактирования
-      await widget.onEditName(nameId, formattedName, gender, statusId, rankId, endDate, deathDate);
+      await widget.onEditName(nameId, formattedName, gender, statusId, rankId, endDate, deathDate, andChad);
       await _loadNames(); // Перезагружаем имена
     }
+  }
+
+  String _getChadText(Map<String, dynamic> name) {
+    final settings = Provider.of<Settings>(context);
+
+    final andChad = name['and_chad'] == 1;
+    return andChad ? (settings.useShortNames ? 'со чад.' :'со чадами') : '';
   }
 
   @override
@@ -1442,6 +1458,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                                                 ? rankText[0].toLowerCase() + rankText.substring(1) // Если статус есть, начинаем с маленькой буквы
                                                 : rankText, // Если статуса нет, оставляем как есть
                                           name['name'],
+                                          _getChadText(name), // Добавляем "со чадами" в конец
                                         ].join(' '),
                                         style: TextStyle(
                                           fontSize: Provider.of<Settings>(context).fontSize,
@@ -1609,6 +1626,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     String? selectedRank;
     DateTime? selectedDate;
     DateTime? selectedDeathDate;
+    bool andChad = false;
 
     Timer? _genderSelectionTimer;
     bool showGenderSelection = false;
@@ -1735,6 +1753,22 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                           ),
                           SizedBox(height: 16),
                         ],
+                        if (widget.nameList['type'] == 0 && selectedGender == 0) ...[
+                          CheckboxListTile(
+                            title: Text('Со чадами'),
+                            value: andChad,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == true) {
+                                  andChad = true;
+                                } else {
+                                  andChad = false;
+                                }
+                              });
+                            },
+                          ),
+                          SizedBox(height: 16),
+                        ],
                         SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: selectedStatus,
@@ -1856,6 +1890,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             findOptionByName(selectedRank).id,
                             selectedDate?.toIso8601String().split('T')[0], // Формат YYYY-MM-DD
                             selectedDeathDate?.toIso8601String().split('T')[0],  // Добавляем дату смерти
+                            andChad
                         );
                         Navigator.of(context).pop();
                       }
@@ -1886,6 +1921,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     DateTime? selectedDeathDate = name['death_date'] == null
         ? null
         : DateTime.parse(name['death_date']);
+    bool andChad = name['and_chad'] == 1 ? true : false;
 
     // Инициализируем список статусов в зависимости от типа списка
     _updateStatusOptions(widget.nameList['type'], selectedGender);
@@ -1993,6 +2029,22 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             });
                           },
                         ),
+                        if (widget.nameList['type'] == 0 && selectedGender == 0) ...[
+                          CheckboxListTile(
+                            title: Text('Со чадами'),
+                            value: andChad,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == true) {
+                                  andChad = true;
+                                } else {
+                                  andChad = false;
+                                }
+                              });
+                            },
+                          ),
+                          SizedBox(height: 16),
+                        ],
                         SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: selectedStatus?.isEmpty ?? true ? null : selectedStatus,
@@ -2134,6 +2186,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                           findOptionByName(selectedRank).id,
                           selectedDate?.toIso8601String().split('T')[0], // Формат YYYY-MM-DD
                           selectedDeathDate?.toIso8601String().split('T')[0],
+                          andChad
                         );
                         Navigator.of(context).pop();
                       }
