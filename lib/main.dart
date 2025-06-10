@@ -1311,9 +1311,38 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
         : _rankOptionsFemale.map((opt) => opt.full).toList();
   }
 
+  void _validateAndSetRank(TextEditingController _rankTypeAheadController, String? selectedRank, int selectedGender) {
+    final enteredRank = _rankTypeAheadController.text.trim();
+    final allRanks = selectedGender == 1
+        ? _rankOptionsMale.map((e) => e.full).toList()
+        : _rankOptionsFemale.map((e) => e.full).toList();
+
+    // Проверяем, есть ли введенный сан в списке
+    final isValid = allRanks.any((rank) => rank.toLowerCase() == enteredRank.toLowerCase());
+
+    if (!isValid && enteredRank.isNotEmpty) {
+      // Если сан не найден и поле не пустое - сбрасываем
+      setState(() {
+        _rankTypeAheadController.clear();
+        selectedRank = null;
+      });
+    } else if (isValid) {
+      // Если сан найден - устанавливаем точное значение из списка
+      final exactRank = allRanks.firstWhere(
+            (rank) => rank.toLowerCase() == enteredRank.toLowerCase(),
+        orElse: () => enteredRank,
+      );
+      setState(() {
+        _rankTypeAheadController.text = exactRank;
+        selectedRank = exactRank;
+      });
+    }
+  }
+
   void _showAddNameDialog(BuildContext context) {
     final _formKey = GlobalKey<FormState>(); // Ключ для управления состоянием формы
     final TextEditingController _typeAheadController = TextEditingController();
+    final TextEditingController _rankTypeAheadController = TextEditingController();
 
     int selectedGender = 1; // По умолчанию выбран мужской пол
     String? selectedStatus;
@@ -1421,6 +1450,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               // Проверяем, существует ли текущий сан в новом списке
                               if(!_currentRankOptions.contains(selectedRank)) {
                                 selectedRank = null;
+                                _rankTypeAheadController.text = '';
                               }
                               if(selectedGender == 1) {
                                 andChad = false;
@@ -1445,6 +1475,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                                 _updateStatusOptions(widget.nameList['type'], selectedGender);
                                 selectedStatus = null;
                                 selectedRank = null;
+                                _rankTypeAheadController.text = '';
                                 // Если выбран мужской пол, сбрасываем флаг "со чадами"
                                 if (selectedGender == 1) {
                                   andChad = false;
@@ -1512,20 +1543,52 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               }
                             },
                           ),
-                        DropdownButtonFormField<String>(
-                          value: selectedRank,
-                          decoration: InputDecoration(labelText: 'Сан'),
-                          items: _currentRankOptions.map((rank) {
-                            return DropdownMenuItem(
-                              value: rank.isEmpty ? null : rank,
-                              child: Text(rank.isEmpty ? 'Не выбрано' : rank),
+                        TypeAheadField<String>(
+                          controller: _rankTypeAheadController,
+                          suggestionsCallback: (pattern) {
+                            final List<String> allRanks = selectedGender == 1
+                                ? _rankOptionsMale.map((e)=> e.full).toList() // Если выбран мужской пол, берем только мужские сана
+                                : _rankOptionsFemale.map((e)=> e.full).toList();
+                            // Умный поиск народных обозначений иереев
+                            if (pattern.toLowerCase().contains('отц')
+                                || pattern.toLowerCase().contains('оте')
+                                || pattern.toLowerCase().contains('ба')
+                                || pattern.toLowerCase().contains('свя')) {
+                              return allRanks.where((name) => name.toLowerCase().contains('иерея') || name.toLowerCase().contains('иеромонаха')).toList();
+                            }
+                            return allRanks
+                                .where((name) => name.toLowerCase().contains(pattern.toLowerCase()))
+                                .toList();
+                          },
+                          itemBuilder: (context, String suggestion) {
+                            return ListTile(
+                              title: Text(suggestion.isEmpty ? 'Не выбрано' : suggestion),
                             );
-                          }).toList(),
-                          onChanged: (value) {
+                          },
+                          onSelected: (String value) {
                             setState(() {
+                              _rankTypeAheadController.text = value;
                               selectedRank = value;
                             });
                           },
+                          builder: (context, controller, focusNode) {
+                            return TextFormField(
+                              controller: _rankTypeAheadController,
+                              focusNode: focusNode,
+                              decoration: InputDecoration(
+                                hintText: 'Введите название сана',
+                              ),
+                              onEditingComplete: () {
+                                // При завершении редактирования (например, нажатие Enter)
+                                _validateAndSetRank(_rankTypeAheadController, selectedRank, selectedGender);
+                              },
+                              onTapOutside: (event) {
+                                // При тапе вне поля (потеря фокуса)
+                                _validateAndSetRank(_rankTypeAheadController, selectedRank, selectedGender);
+                              },
+                            );
+                          },
+                          emptyBuilder: (context) => SizedBox.shrink(),
                         ),
                         SizedBox(height: 16),
                         ListTile(
@@ -1636,6 +1699,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
     if(!_currentRankOptions.contains(selectedRank)) {
       selectedRank = null;
     }
+    final TextEditingController _rankTypeAheadController = TextEditingController(text: selectedRank);
 
     showDialog(
       context: context,
@@ -1696,6 +1760,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               // Проверяем, существует ли текущий сан в новом списке
                               if(!_currentRankOptions.contains(selectedRank)) {
                                 selectedRank = null;
+                                _rankTypeAheadController.text = '';
                               }
                               if(selectedGender == 1) {
                                 andChad = false;
@@ -1733,6 +1798,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               // Проверяем, существует ли текущий сан в новом списке
                               if(!_currentRankOptions.contains(selectedRank)) {
                                 selectedRank = null;
+                                _rankTypeAheadController.text = '';
                               }
                             });
                           },
@@ -1804,28 +1870,53 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               }
                             },
                           ),
-                        DropdownButtonFormField<String>(
-                          value: selectedRank?.isEmpty ?? true ? null : selectedRank,
-                          decoration: InputDecoration(labelText: 'Сан'),
-                          items: [
-                            // Явно добавляем вариант "Не выбрано" с value: null
-                            DropdownMenuItem<String>(
-                              value: null,
-                              child: Text('Не выбрано'),
-                            ),
-                            // Добавляем только непустые статусы
-                            ..._currentRankOptions.where((s) => s.isNotEmpty).map((rank) {
-                              return DropdownMenuItem<String>(
-                                value: rank,
-                                child: Text(rank),
-                              );
-                            }).toList(),
-                          ],
-                          onChanged: (value) {
+                        TypeAheadField<String>(
+                          controller: _rankTypeAheadController,
+                          suggestionsCallback: (pattern) {
+                            //todo Вынести в отдельный метод. Дубль
+                            final List<String> allRanks = selectedGender == 1
+                                ? _rankOptionsMale.map((e)=> e.full).toList() // Если выбран мужской пол, берем только мужские сана
+                                : _rankOptionsFemale.map((e)=> e.full).toList();
+                            // Умный поиск народных обозначений иереев
+                            if (pattern.toLowerCase().contains('отц')
+                                || pattern.toLowerCase().contains('оте')
+                                || pattern.toLowerCase().contains('ба')
+                                || pattern.toLowerCase().contains('свя')) {
+                              return allRanks.where((name) => name.toLowerCase().contains('иерея') || name.toLowerCase().contains('иеромонаха')).toList();
+                            }
+                            return allRanks
+                                .where((name) => name.toLowerCase().contains(pattern.toLowerCase()))
+                                .toList();
+                          },
+                          itemBuilder: (context, String suggestion) {
+                            return ListTile(
+                              title: Text(suggestion.isEmpty ? 'Не выбрано' : suggestion),
+                            );
+                          },
+                          onSelected: (String value) {
                             setState(() {
+                              _rankTypeAheadController.text = value;
                               selectedRank = value;
                             });
-                            },
+                          },
+                          builder: (context, controller, focusNode) {
+                            return TextFormField(
+                              controller: _rankTypeAheadController,
+                              focusNode: focusNode,
+                              decoration: InputDecoration(
+                                hintText: 'Введите название сана',
+                              ),
+                              onEditingComplete: () {
+                                // При завершении редактирования (например, нажатие Enter)
+                                _validateAndSetRank(_rankTypeAheadController, selectedRank, selectedGender);
+                              },
+                              onTapOutside: (event) {
+                                // При тапе вне поля (потеря фокуса)
+                                _validateAndSetRank(_rankTypeAheadController, selectedRank, selectedGender);
+                              },
+                            );
+                          },
+                          emptyBuilder: (context) => SizedBox.shrink(),
                         ),
                         SizedBox(height: 16),
                         ListTile(
