@@ -1028,10 +1028,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
         children: [
           Container(
             padding: EdgeInsets.only(
-              top: 40.0,
-              bottom: 70.0,
-              left: 16,
-              right: 16,
+              bottom: 20.0, //todo адаптивны размер
             ),
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
