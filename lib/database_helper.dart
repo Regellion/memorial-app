@@ -365,7 +365,6 @@ class DatabaseHelper {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Версия 1.0.3
-    if (oldVersion < 10003) {
       try {
         // Добавляем новые поля в таблицу names
         await db.execute('ALTER TABLE names ADD COLUMN and_chad INTEGER');
@@ -373,10 +372,5 @@ class DatabaseHelper {
       } catch (_) {
         //todo log
       }
-    }
-    if (oldVersion == 10000) { //версия 1.0.0
-    }
-    if (oldVersion <= 20000) { //версия 2.0.0
-    }
   }
 }
