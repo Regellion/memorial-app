@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -25,7 +26,7 @@ void main() {
         future: _initializeApp(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            final isFirstLaunch = snapshot.data as bool;;
+            final isFirstLaunch = snapshot.data as bool;
             return MultiProvider(
               providers: [
                 ChangeNotifierProvider(create: (context) => Settings()),
@@ -1064,6 +1065,12 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                         ),
                       ),
                       IconButton(
+                        icon: Icon(Icons.share),
+                        onPressed: () {
+                          _showShareMenu(context, widget.nameList);
+                        },
+                      ),
+                      IconButton(
                         icon: Icon(Icons.edit),
                         onPressed: () {
                           _showEditTitleDialog(context, widget.nameList['title']);
@@ -1996,6 +2003,113 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
         );
       },
     );
+  }
+
+  void _showShareMenu(BuildContext context, Map<String, dynamic> nameList) {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromPoints(
+          overlay.localToGlobal(overlay.size.topRight(Offset.zero), ancestor: overlay),
+          overlay.localToGlobal(overlay.size.topRight(Offset.zero), ancestor: overlay),
+        ),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        PopupMenuItem<String>(
+          value: 'text',
+          child: ListTile(
+            contentPadding: EdgeInsets.symmetric(horizontal: 16),
+            leading: Icon(Icons.text_fields,
+                color: Colors.blue),
+            title: Text('Отправить как текст',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey
+                      : null,
+                )),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'image',
+          child: ListTile(
+            contentPadding: EdgeInsets.symmetric(horizontal: 16),
+            leading: Icon(Icons.image,
+                color: Colors.blue),
+            title: Text('Отправить как картинку',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey
+                      : null,
+                )),
+          ),
+        ),
+        //todo добавить возможность поделиться ссылкой
+      ],
+    ).then((value) {
+      if (value == 'text') {
+        _shareAsText(context, nameList['id'], nameList['type']);
+      } else if (value == 'image') {
+        // TODO: реализовать позже
+      }
+      //todo ссылка
+    });
+  }
+
+  Future<void> _shareAsText(BuildContext context, int? currentListId, int? currentListType) async {
+    if (currentListId == null) return;
+
+    final settings = Provider.of<Settings>(context, listen: false);
+    final names = await _dbHelper.loadNames(currentListId!, settings.sortType);
+
+    if (names.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Список пуст, нечего отправлять')),
+      );
+      return;
+    }
+
+    StringBuffer buffer = StringBuffer();
+
+    // Заголовок
+    buffer.writeln(currentListType == 0 ? 'О ЗДРАВИИ' : 'ОБ УПОКОЕНИИ');
+    buffer.writeln();
+
+    // Имена
+    for (var name in names) {
+      final status = name['status_id'];
+      final rank = name['rank_id'];
+      final andChad = name['and_chad'] == 1;
+
+      // Получаем текстовые представления
+      final statusText = settings.useShortNames
+          ? findOptionById(status).short
+          : findOptionById(status).full;
+
+      final rankText = settings.useShortNames
+          ? findOptionById(rank).short
+          : findOptionById(rank).full;
+
+      // Комбинируем результат
+      final parts = [
+        if (statusText.isNotEmpty) statusText,
+        if (rankText.isNotEmpty)
+          statusText.isNotEmpty
+              ? rankText[0].toLowerCase() + rankText.substring(1)
+              : rankText,
+        name['name'],
+        if (andChad) (settings.useShortNames ? 'со чад.' : 'со чадами'),
+      ].where((s) => s.isNotEmpty).join(' ');
+
+      buffer.writeln(parts);
+    }
+
+    // Используем пакет share_plus для кроссплатформенного шеринга
+    await Share.share(buffer.toString());
   }
 
   void _showEditTitleDialog(BuildContext context, String currentTitle) {
