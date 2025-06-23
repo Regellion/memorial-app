@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -7,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1064,7 +1068,8 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                           ),
                         ),
                       ),
-                      IconButton(
+                      if(_names.isNotEmpty)
+                        IconButton(
                         icon: Icon(Icons.share),
                         onPressed: () {
                           _showShareMenu(context, widget.nameList);
@@ -1518,7 +1523,6 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                           onChanged: (value) {
                             setState(() {
                               selectedStatus = value;
-                              selectedDeathDate ??= DateTime.now();
                             });
                           },
                         ),
@@ -2054,17 +2058,230 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
       if (value == 'text') {
         _shareAsText(context, nameList['id'], nameList['type']);
       } else if (value == 'image') {
-        // TODO: реализовать позже
+        _shareAsImage(context, nameList['id'], nameList['type'], nameList['title']);
       }
       //todo ссылка
     });
+  }
+
+  Future<void> _shareAsImage(BuildContext context, int? currentListId, int? currentListType, String title) async {
+    if (currentListId == null) return;
+
+    try {
+      // Получаем данные для отрисовки
+      final settings = Provider.of<Settings>(context, listen: false);
+      final names = await _dbHelper.loadNames(currentListId, settings.sortType);
+      final fullNames = _getFullNamesStrings(names, settings.useShortNames);
+
+      // Разбиваем список имен на части по 10 элементов
+      final chunks = _chunkNames(fullNames, 10);
+      addLastChunksNamesIfNeed(chunks[chunks.length-1]);
+
+      // Создаем изображения для каждой части
+      final files = await Future.wait(
+          chunks.map((chunk) => _createListImage(currentListId, currentListType ?? 0, chunk))
+      );
+
+      // Преобразуем файлы в XFile
+      final xFiles = files.map((file) => XFile(file.path)).toList();
+      await Share.shareXFiles(
+        xFiles,
+        text: 'Список поминовения: $title',
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка при создании изображения: $e')),
+      );
+    }
+  }
+
+  // Разбивает список имен на части по chunkSize элементов
+  List<List<String>> _chunkNames(List<String> names, int chunkSize) {
+    List<List<String>> chunks = [];
+    for (var i = 0; i < names.length; i += chunkSize) {
+      var end = (i + chunkSize < names.length) ? i + chunkSize : names.length;
+      chunks.add(names.sublist(i, end));
+    }
+    return chunks;
+  }
+
+  List<String> _getFullNamesStrings(List<Map<String, dynamic>> names, bool useShortNames) {
+    List<String> fullNames = [];
+    for (var name in names) {
+      final status = name['status_id'];
+      final rank = name['rank_id'];
+      final andChad = name['and_chad'] == 1;
+
+      final statusText = findOptionById(status).short;
+      final rankText = findOptionById(rank).short;
+      // Обрезаем имя, если оно длиннее 20 символов
+      String nameText = name['name'];
+      final parts = [
+        if (statusText.isNotEmpty) statusText,
+        if (rankText.isNotEmpty)
+          statusText.isNotEmpty
+              ? rankText[0].toLowerCase() + rankText.substring(1)
+              : rankText,
+        nameText,
+        if (andChad) ('со чад.'),
+      ].where((s) => s.isNotEmpty).join(' ');
+      fullNames.add(parts);
+    }
+
+    return fullNames;
+  }
+
+  Future<File> _createListImage(int listId, int listType, List<String> fullNames) async {
+    // Размеры изображения
+    const imageWidth = 600.0;
+    const imageHeight = 900.0;
+    final borderColour = listType == 1 ? Colors.indigo : Colors.red;
+
+    // Создаем PictureRecorder для записи рисунка
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, imageWidth, imageHeight));
+
+    // Заливаем фон белым цветом
+    final paint = Paint()..color = Colors.white;
+    canvas.drawRect(Rect.fromLTWH(0, 0, imageWidth, imageHeight), paint);
+
+    // Рисуем рамку по периметру
+    final borderPaint = Paint()
+      ..color = borderColour
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+    canvas.drawRect(Rect.fromLTWH(2, 2, imageWidth - 4, imageHeight - 4), borderPaint);
+
+    final watermark = 'Создано в приложении "Мой приход. Помянник"';
+
+    // Загружаем изображение для заголовка
+    final ui.Image image = await _loadImage(AssetImage(listType == 0
+        ? 'assets/images/health_frame_title.png'
+        : 'assets/images/repose_frame_title_print.png'));
+
+    // Отрисовка заголовочной картинки
+    const headerWidth = 409.0;
+    const headerHeight = 190.0;
+    const headerTopMargin = 20.0;
+
+    // Рассчитываем позицию для центрирования изображения
+    final headerLeft = (imageWidth - headerWidth) / 2;
+    final headerTop = headerTopMargin;
+
+    // Рисуем изображение заголовка
+    paintImage(
+      canvas: canvas,
+      rect: Rect.fromLTWH(headerLeft, headerTop, headerWidth, headerHeight),
+      image: image,
+      fit: BoxFit.contain,
+    );
+
+    // Отрисовка списка имен
+    const nameFontSize = 36.0;
+    const nameTopPadding = headerTopMargin + headerHeight + 30.0;
+    const nameLineHeight = 50.0;
+    const maxNames = 10;
+    const underlineHeight = 2.0;
+
+    final nameTextStyle = TextStyle(
+      fontSize: nameFontSize,
+      color: Colors.black,
+    );
+
+    final underlinePaint = Paint()
+      ..color = borderColour
+      ..strokeWidth = underlineHeight;
+
+    for (int i = 0; i < maxNames && i < fullNames.length; i++) {
+      final name = fullNames[i];
+      final yPos = nameTopPadding + i * nameLineHeight;
+
+      // Рисуем имя с центрированием
+      final namePainter = TextPainter(
+        text: TextSpan(text: name, style: nameTextStyle),
+        textDirection: ui.TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '...',
+      );
+      namePainter.layout(maxWidth: imageWidth);
+      namePainter.paint(
+          canvas,
+          Offset(
+              (imageWidth - namePainter.width) / 2, // Центрирование по горизонтали
+              yPos
+          )
+      );
+
+      // Рисуем подчеркивание (также центрированное)
+      final underlineY = yPos + nameFontSize + 5;
+      final underlineWidth = 450; // Немного шире текста
+      canvas.drawLine(
+        Offset((imageWidth - underlineWidth) / 2, underlineY),
+        Offset((imageWidth + underlineWidth) / 2, underlineY),
+        underlinePaint,
+      );
+    }
+
+    // Отрисовка водяного знака по центру
+    const watermarkBottomMargin = 20.0;
+
+    final watermarkPainter = TextPainter(
+      text: TextSpan(
+        text: watermark,
+        style: TextStyle(
+          fontSize: 24,
+          color: Colors.grey[600]?.withOpacity(0.5),
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    );
+    watermarkPainter.layout();
+    watermarkPainter.paint(
+      canvas,
+      Offset(
+        (imageWidth - watermarkPainter.width) / 2, // Центрирование по горизонтали
+        imageHeight - watermarkPainter.height - watermarkBottomMargin,
+      ),
+    );
+
+    // Завершаем запись и создаем изображение
+    final picture = recorder.endRecording();
+    final uiImage = await picture.toImage(imageWidth.toInt(), imageHeight.toInt());
+
+    // Конвертируем в PNG и сохраняем в файл
+    final byteData = await uiImage.toByteData(format: ui.ImageByteFormat.png);
+    final buffer = byteData!.buffer.asUint8List();
+
+    // Создаем временный файл
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/list_${listId}_${DateTime.now().millisecondsSinceEpoch}.png');
+    await file.writeAsBytes(buffer);
+
+    return file;
+  }
+
+  // Вспомогательная функция для загрузки изображения
+  Future<ui.Image> _loadImage(ImageProvider imageProvider) async {
+    final completer = Completer<ui.Image>();
+    final stream = imageProvider.resolve(ImageConfiguration.empty);
+
+    final listener = ImageStreamListener((ImageInfo info, bool _) {
+      completer.complete(info.image);
+    });
+
+    stream.addListener(listener);
+    final image = await completer.future;
+    stream.removeListener(listener);
+
+    return image;
   }
 
   Future<void> _shareAsText(BuildContext context, int? currentListId, int? currentListType) async {
     if (currentListId == null) return;
 
     final settings = Provider.of<Settings>(context, listen: false);
-    final names = await _dbHelper.loadNames(currentListId!, settings.sortType);
+    final names = await _dbHelper.loadNames(currentListId, settings.sortType);
 
     if (names.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2162,6 +2379,14 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
         );
       },
     );
+  }
+
+  void addLastChunksNamesIfNeed(List<String> chunk) {
+    // // Добавляем пустые строки, если элементов меньше 10
+    if (chunk.length < 10) {
+      final emptyStringsCount = 10 - chunk.length;
+      chunk.addAll(List.filled(emptyStringsCount, ''));
+    }
   }
 }
 
