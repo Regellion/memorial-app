@@ -1552,6 +1552,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             },
                           ),
                         TypeAheadField<String>(
+                          key: Key(_currentRankOptions.hashCode.toString()),
                           controller: _rankTypeAheadController,
                           suggestionsCallback: (pattern) {
                             final List<String> allRanks = selectedGender == 1
@@ -1879,6 +1880,7 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                             },
                           ),
                         TypeAheadField<String>(
+                          key: Key(_currentRankOptions.hashCode.toString()),
                           controller: _rankTypeAheadController,
                           suggestionsCallback: (pattern) {
                             //todo Вынести в отдельный метод. Дубль
