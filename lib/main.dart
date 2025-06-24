@@ -1433,6 +1433,21 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                                     showGenderSelection = !exactMatch && _lastSelectedSuggestion == null;
                                   });
                                 });
+
+                                if (selectedDeathDate != null) {
+                                  setState(() {
+                                    selectedDeathDate = selectedDeathDate;
+                                    final deathDateTime = selectedDeathDate;
+                                    final fortyDaysLater = deathDateTime?.add(
+                                        Duration(days: 40));
+                                    if (DateTime.now().isBefore(
+                                        fortyDaysLater!)) {
+                                      selectedStatus = selectedGender == 1
+                                          ? "Новопреставленного"
+                                          : "Новопреставленной";
+                                    }
+                                  });
+                                }
                               },
                             );
                           },
@@ -1464,6 +1479,17 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               if(selectedGender == 1) {
                                 andChad = false;
                               }
+                              if (selectedDeathDate != null) {
+                                selectedDeathDate = selectedDeathDate;
+                                final deathDateTime = selectedDeathDate;
+                                final fortyDaysLater = deathDateTime?.add(
+                                    Duration(days: 40));
+                                if (DateTime.now().isBefore(fortyDaysLater!)) {
+                                  selectedStatus = selectedGender == 1
+                                      ? "Новопреставленного"
+                                      : "Новопреставленной";
+                                }
+                              }
                             });
                           },
                           // Ничего не отображает, если список пуст
@@ -1488,6 +1514,17 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                                 // Если выбран мужской пол, сбрасываем флаг "со чадами"
                                 if (selectedGender == 1) {
                                   andChad = false;
+                                }
+                                if (selectedDeathDate != null) {
+                                  selectedDeathDate = selectedDeathDate;
+                                  final deathDateTime = selectedDeathDate;
+                                  final fortyDaysLater = deathDateTime?.add(
+                                      Duration(days: 40));
+                                  if (DateTime.now().isBefore(fortyDaysLater!)) {
+                                    selectedStatus = selectedGender == 1
+                                        ? "Новопреставленного"
+                                        : "Новопреставленной";
+                                  }
                                 }
                               });
                             },
@@ -1547,6 +1584,13 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               if (pickedDate != null) {
                                 setState(() {
                                   selectedDeathDate = pickedDate;
+                                  final deathDateTime = selectedDeathDate;
+                                  final fortyDaysLater = deathDateTime?.add(Duration(days: 40));
+                                  if (DateTime.now().isBefore(fortyDaysLater!)) {
+                                    selectedStatus = selectedGender == 1
+                                        ? "Новопреставленного"
+                                        : "Новопреставленной";
+                                  }
                                 });
                               }
                             },
@@ -1774,7 +1818,16 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               if(selectedGender == 1) {
                                 andChad = false;
                               }
-
+                              if (selectedDeathDate != null) {
+                                selectedDeathDate = selectedDeathDate;
+                                final deathDateTime = selectedDeathDate;
+                                final fortyDaysLater = deathDateTime?.add(Duration(days: 40));
+                                if (DateTime.now().isBefore(fortyDaysLater!)) {
+                                  selectedStatus = selectedGender == 1
+                                      ? "Новопреставленного"
+                                      : "Новопреставленной";
+                                }
+                              }
                             });
                           },
                           emptyBuilder: (context) {
@@ -1808,6 +1861,17 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               if(!_currentRankOptions.contains(selectedRank)) {
                                 selectedRank = null;
                                 _rankTypeAheadController.text = '';
+                              }
+
+                              if (selectedDeathDate != null) {
+                                selectedDeathDate = selectedDeathDate;
+                                final deathDateTime = selectedDeathDate;
+                                final fortyDaysLater = deathDateTime?.add(Duration(days: 40));
+                                if (DateTime.now().isBefore(fortyDaysLater!)) {
+                                  selectedStatus = selectedGender == 1
+                                      ? "Новопреставленного"
+                                      : "Новопреставленной";
+                                }
                               }
                             });
                           },
@@ -1875,6 +1939,13 @@ class _NameListPageState extends State<NameListPage> with AutomaticKeepAliveClie
                               if (pickedDate != null) {
                                 setState(() {
                                   selectedDeathDate = pickedDate;
+                                  final deathDateTime = selectedDeathDate;
+                                  final fortyDaysLater = deathDateTime?.add(Duration(days: 40));
+                                  if (DateTime.now().isBefore(fortyDaysLater!)) {
+                                    selectedStatus = selectedGender == 1
+                                        ? "Новопреставленного"
+                                        : "Новопреставленной";
+                                  }
                                 });
                               }
                             },
